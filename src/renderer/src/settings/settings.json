@@ -1,9 +1,0 @@
-{
-  "database": {
-    "host": "default_server",
-    "port": "default_server",
-    "user": "default_user",
-    "password": "default_password",
-    "database": "default_database"
-  }
-}

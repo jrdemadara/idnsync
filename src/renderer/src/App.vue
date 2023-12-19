@@ -1,12 +1,55 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import axios from 'axios'
-// import logo from './assets/icons.svg'
 import { Settings, HelpCircle } from 'lucide-vue-next'
-
+import { ipcRenderer } from 'electron'
+const apiStatus = ref(0)
+const section = ref('main')
+const testing = ref(false)
 const loading = ref(false)
 const status = ref('Synchronize')
 const message = ref('Click to synchronize data.')
+
+const databaseConfig = ref({
+  host: '',
+  port: 0,
+  username: '',
+  password: '',
+  schema: ''
+})
+
+onMounted(() => {
+  getLocalConnection()
+})
+
+const getLocalConnection = async () => {
+  axios
+    .get('http://127.0.0.1:20230/api/v1/uri/local_database', {
+      headers: {
+        authorization:
+          'softspark@zgmEl=Z4Bqdm402RuNJg17RAP9kGKYq8SbrNNlRdnygJws!n5XE1Ob=mmElEQLUjYOEiYDUkPJtFHccFuaLrt9u6uCPIonOfrq/4MqojK!vOgIp4CSS8aj?0um7fH4jcWOCBWZFkn844WGuySOxY-Hkkj0P-AwXOi7pMjP!PJ3DBLUZi6LTtio/MY?BWbynV8HTPGAoLBqvzu0RC6TXGIFvzw?klBAw0d-dut6Ks3SNGKZtAqfSB1P'
+      }
+    })
+    .then(function (response) {
+      if (response.data) {
+        apiStatus.value = 1
+        databaseConfig.value.host = response.data.host
+        databaseConfig.value.port = response.data.port
+        databaseConfig.value.username = response.data.user
+        databaseConfig.value.password = response.data.password
+        databaseConfig.value.schema = response.data.database
+      } else {
+        apiStatus.value = 0
+      }
+    })
+    .catch(function () {
+      apiStatus.value = 0
+    })
+    .finally(function () {
+      // Send the database config to the main process
+      //ipcService.setDatabaseConfig({ config: databaseConfig, dirname })
+    })
+}
 
 const syncData = async () => {
   if (!loading.value) {
@@ -53,12 +96,25 @@ const syncData = async () => {
           IDNSync <span class="font-light text-xs font-mono">v1.0</span>
         </h4>
       </div>
-      <div class="flex">
-        <HelpCircle :size="24" :stroke-width="1" class="text-slate-50" />
-        <Settings :size="24" :stroke-width="1" class="ml-3 text-slate-50" />
+      <div class="flex justify-center items-center">
+        <div class="flex justify-center items-center mr-4">
+          <div
+            class="animate-pulse w-3 h-3 rounded-badge mr-1"
+            :class="{ 'bg-green-500': apiStatus == 1, 'bg-red-500': apiStatus == 0 }"
+          ></div>
+          <p class="text-sm">Online</p>
+        </div>
+
+        <HelpCircle :size="24" :stroke-width="1" class="text-slate-50" @click="section = 'about'" />
+        <Settings
+          :size="24"
+          :stroke-width="1"
+          class="ml-3 text-slate-50"
+          @click="section = 'settings'"
+        />
       </div>
     </header>
-    <div class="flex flex-col justify-center items-center w-full h-full">
+    <div v-show="section == 'main'" class="flex flex-col justify-center items-center w-full h-full">
       <div class="relative flex justify-center items-center w-64 h-64 rounded-full">
         <span
           class="absolute inline-flex w-48 h-48 rounded-full"
@@ -96,6 +152,55 @@ const syncData = async () => {
       >
         {{ message }}
       </p>
+    </div>
+
+    <div v-show="section == 'settings'" class="flex flex-col w-screen h-screen px-5 mt-2">
+      <h2 class="text-primary font-bold uppercase">Connection Settings</h2>
+      <div class="grid grid-cols-2 gap-4 gap-y-1 mt-6">
+        <label class="form-control w-full max-w-xs">
+          <div class="label">
+            <span class="label-text">Hostname</span>
+          </div>
+          <input type="text" placeholder="" class="input input-bordered w-full max-w-xs" />
+        </label>
+        <label class="form-control w-full max-w-xs">
+          <div class="label">
+            <span class="label-text">Port</span>
+          </div>
+          <input type="text" placeholder="" class="input input-bordered w-full max-w-xs" />
+        </label>
+        <label class="form-control w-full max-w-xs">
+          <div class="label">
+            <span class="label-text">Username</span>
+          </div>
+          <input type="text" placeholder="" class="input input-bordered w-full max-w-xs" />
+        </label>
+        <label class="form-control w-full max-w-xs">
+          <div class="label">
+            <span class="label-text">Password</span>
+          </div>
+          <input type="text" placeholder="" class="input input-bordered w-full max-w-xs" />
+        </label>
+        <label class="form-control w-full max-w-xs">
+          <div class="label">
+            <span class="label-text">Database/Schema</span>
+          </div>
+          <input type="text" placeholder="" class="input input-bordered w-full max-w-xs" />
+        </label>
+      </div>
+      <div class="divider mt-6"></div>
+      <div class="flex flex-row justify-between items-center mt-3">
+        <div v-show="testing == true" class="flex flex-col justify-center items-center h-fit">
+          <progress class="progress w-56"></progress>
+          <p class="mt-2">Testing Connection...</p>
+        </div>
+        <div class="flex">
+          <button class="btn btn-neutral mr-5" @click="getLocalConnection">Test Connection</button>
+          <button class="btn btn-primary text-slate-50" @click="section = 'main'">
+            Save & Exit
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
