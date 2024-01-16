@@ -19,7 +19,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
-    "axios": "^1.6.2",
+    "axios": "^1.6.3",
     "electron-updater": "^6.1.1",
     "lucide-vue-next": "^0.294.0",
     "mssql": "^10.0.1"

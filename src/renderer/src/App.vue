@@ -2,7 +2,9 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import { Settings, HelpCircle } from 'lucide-vue-next'
-import { ipcRenderer } from 'electron'
+//import { ipcRenderer } from 'electron'
+const { ipcRenderer } = require('electron')
+const dirname = ipcRenderer.sendSync('get-dirname')
 const apiStatus = ref(0)
 const section = ref('main')
 const testing = ref(false)
@@ -11,11 +13,14 @@ const status = ref('Synchronize')
 const message = ref('Click to synchronize data.')
 
 const databaseConfig = ref({
-  host: '',
+  server: '',
   port: 0,
-  username: '',
+  user: '',
   password: '',
-  schema: ''
+  database: '',
+  options: {
+    trustServerCertificate: true
+  }
 })
 
 onMounted(() => {
@@ -24,7 +29,7 @@ onMounted(() => {
 
 const getLocalConnection = async () => {
   axios
-    .get('http://127.0.0.1:20230/api/v1/uri/local_database', {
+    .get('https://node1.jrdemadara.dev/api/v1/uri/local_database', {
       headers: {
         authorization:
           'softspark@zgmEl=Z4Bqdm402RuNJg17RAP9kGKYq8SbrNNlRdnygJws!n5XE1Ob=mmElEQLUjYOEiYDUkPJtFHccFuaLrt9u6uCPIonOfrq/4MqojK!vOgIp4CSS8aj?0um7fH4jcWOCBWZFkn844WGuySOxY-Hkkj0P-AwXOi7pMjP!PJ3DBLUZi6LTtio/MY?BWbynV8HTPGAoLBqvzu0RC6TXGIFvzw?klBAw0d-dut6Ks3SNGKZtAqfSB1P'
@@ -33,11 +38,11 @@ const getLocalConnection = async () => {
     .then(function (response) {
       if (response.data) {
         apiStatus.value = 1
-        databaseConfig.value.host = response.data.host
+        databaseConfig.value.server = response.data.host
         databaseConfig.value.port = response.data.port
-        databaseConfig.value.username = response.data.user
+        databaseConfig.value.user = response.data.user
         databaseConfig.value.password = response.data.password
-        databaseConfig.value.schema = response.data.database
+        databaseConfig.value.database = response.data.database
       } else {
         apiStatus.value = 0
       }
@@ -47,7 +52,7 @@ const getLocalConnection = async () => {
     })
     .finally(function () {
       // Send the database config to the main process
-      //ipcService.setDatabaseConfig({ config: databaseConfig, dirname })
+      ipcRenderer.send('set-database-config', JSON.stringify(databaseConfig), dirname)
     })
 }
 
@@ -60,7 +65,7 @@ const syncData = async () => {
     await new Promise((resolve) => setTimeout(resolve, 5000))
 
     axios
-      .get('http://127.0.0.1:20230/api/v1/uri/check_update', {
+      .get('https://node1.jrdemadara.dev/api/v1/uri/check_update', {
         headers: {
           authorization:
             'softspark@zgmEl=Z4Bqdm402RuNJg17RAP9kGKYq8SbrNNlRdnygJws!n5XE1Ob=mmElEQLUjYOEiYDUkPJtFHccFuaLrt9u6uCPIonOfrq/4MqojK!vOgIp4CSS8aj?0um7fH4jcWOCBWZFkn844WGuySOxY-Hkkj0P-AwXOi7pMjP!PJ3DBLUZi6LTtio/MY?BWbynV8HTPGAoLBqvzu0RC6TXGIFvzw?klBAw0d-dut6Ks3SNGKZtAqfSB1P'
@@ -70,13 +75,22 @@ const syncData = async () => {
         if (response.data.count > 0) {
           status.value = 'Synchronizing'
           message.value = `Synchronizing ${response.data.count} data...`
-          console.log(response.data.count)
           //Save data to sql
+          ipcRenderer.send('insert-data', JSON.stringify(response.data))
+          ipcRenderer.on('insert-data-response', (event, result) => {
+            if (result.success == true) {
+              status.value = 'Completed'
+              message.value = `Database is up to date.`
+            } else {
+              status.value = 'Resync'
+              message.value = `Error migrating data.`
+            }
+          })
         } else {
           loading.value = false
           status.value = 'Resync'
           message.value = 'Database is up to date.'
-          console.log(response.data.count)
+          console.log(response.data)
         }
       })
       .catch(function (error) {
@@ -135,7 +149,7 @@ const syncData = async () => {
               'bg-blue-700 border-blue-500 hover:bg-blue-600 hover:border-blue-400':
                 status == 'Resync',
               'bg-green-700 border-green-500 hover:bg-green-600 hover:border-green-400':
-                status == 'Complete'
+                status == 'Completed'
             }"
             class="w-64 h-64 rounded-full shadow-inner border-8 hover:transition hover:duration-300 hover:ease-in-out text-2xl text-slate-50"
             @click="syncData"
