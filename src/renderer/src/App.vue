@@ -19,6 +19,7 @@ const databaseConfig = ref({
   password: '',
   database: '',
   options: {
+    encrypt: false,
     trustServerCertificate: true
   }
 })
@@ -175,35 +176,35 @@ const syncData = async () => {
           <div class="label">
             <span class="label-text">Hostname</span>
           </div>
-          <input type="text" placeholder="" class="input input-bordered w-full max-w-xs" />
+          <input type="text" placeholder="" class="input input-sm input-bordered w-full max-w-xs" />
         </label>
         <label class="form-control w-full max-w-xs">
           <div class="label">
             <span class="label-text">Port</span>
           </div>
-          <input type="text" placeholder="" class="input input-bordered w-full max-w-xs" />
+          <input type="text" placeholder="" class="input input-sm input-bordered w-full max-w-xs" />
         </label>
         <label class="form-control w-full max-w-xs">
           <div class="label">
             <span class="label-text">Username</span>
           </div>
-          <input type="text" placeholder="" class="input input-bordered w-full max-w-xs" />
+          <input type="text" placeholder="" class="input input-sm input-bordered w-full max-w-xs" />
         </label>
         <label class="form-control w-full max-w-xs">
           <div class="label">
             <span class="label-text">Password</span>
           </div>
-          <input type="text" placeholder="" class="input input-bordered w-full max-w-xs" />
+          <input type="text" placeholder="" class="input input-sm input-bordered w-full max-w-xs" />
         </label>
         <label class="form-control w-full max-w-xs">
           <div class="label">
             <span class="label-text">Database/Schema</span>
           </div>
-          <input type="text" placeholder="" class="input input-bordered w-full max-w-xs" />
+          <input type="text" placeholder="" class="input input-sm input-bordered w-full max-w-xs" />
         </label>
       </div>
       <div class="divider mt-6"></div>
-      <div class="flex flex-row justify-between items-center mt-3">
+      <div class="flex flex-row justify-between items-center">
         <div v-show="testing == true" class="flex flex-col justify-center items-center h-fit">
           <progress class="progress w-56"></progress>
           <p class="mt-2">Testing Connection...</p>

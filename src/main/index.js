@@ -10,8 +10,8 @@ let dirname
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 600,
-    height: 540,
+    width: 520,
+    height: 470,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -116,8 +116,8 @@ ipcMain.on('insert-data', async (event, data) => {
   try {
     const parsedData = JSON.parse(data)
     const request = new sql.Request(dbConnection)
-    console.log(parsedData.ran)
-    const query = `INSERT INTO tblDelegates (id, Field1, Field2, Field3, Field4, Field5 ) VALUES (1,'123456', 'demadara', 'johnny', 'sunico', '12')`
+    console.log(parsedData)
+    const query = `INSERT INTO tblDelegates (RecordID, Field1, Field2, Field3, Field4, Field5 ) VALUES (1,'123456', 'demadara', 'johnny', 'sunico', '12')`
 
     // Replace @value1, @value2, ... with actual values from the 'data' object
 
