@@ -1,60 +1,65 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import { Settings, HelpCircle } from 'lucide-vue-next'
-//import { ipcRenderer } from 'electron'
+import oauth from 'axios-oauth-client'
+import { Settings, HelpCircle, Database } from 'lucide-vue-next'
+
+// Import ipcRenderer using require from Electron
 const { ipcRenderer } = require('electron')
+
+// Get the dirname synchronously
 const dirname = ipcRenderer.sendSync('get-dirname')
+
+// Initialize reactive variables using ref
 const apiStatus = ref(0)
+const databaseStatus = ref(0)
 const section = ref('main')
 const testing = ref(false)
 const loading = ref(false)
 const status = ref('Synchronize')
 const message = ref('Click to synchronize data.')
+const accessToken = ref('0')
+
+const authenticate = async () => {
+  const getClientCredentials = oauth.clientCredentials(
+    axios.create(),
+    'https://testadmin.myibp.ph/oauth',
+    'id_now',
+    'w7EJ7BkT943ZtmXoHKlkhYRca0R4IcrO'
+  )
+  const auth = await getClientCredentials('printer', 'client_credentials')
+  accessToken.value = auth.access_token
+  if (auth.access_token) {
+    apiStatus.value = 1
+  }
+}
 
 const databaseConfig = ref({
-  server: '',
-  port: 0,
-  user: '',
-  password: '',
-  database: '',
+  server: '192.168.0.200\\SQLEXPRESS',
+  port: 1433,
+  user: 'sa',
+  password: 'admin',
+  database: 'RFIDSystem',
   options: {
     encrypt: false,
     trustServerCertificate: true
   }
 })
 
-onMounted(() => {
-  getLocalConnection()
-})
+const checkLocalDatabase = async () => {
+  const configJson = JSON.stringify(databaseConfig)
+  ipcRenderer.send('set-database-config', configJson, dirname)
 
-const getLocalConnection = async () => {
-  axios
-    .get('https://node1.jrdemadara.dev/api/v1/uri/local_database', {
-      headers: {
-        authorization:
-          'softspark@zgmEl=Z4Bqdm402RuNJg17RAP9kGKYq8SbrNNlRdnygJws!n5XE1Ob=mmElEQLUjYOEiYDUkPJtFHccFuaLrt9u6uCPIonOfrq/4MqojK!vOgIp4CSS8aj?0um7fH4jcWOCBWZFkn844WGuySOxY-Hkkj0P-AwXOi7pMjP!PJ3DBLUZi6LTtio/MY?BWbynV8HTPGAoLBqvzu0RC6TXGIFvzw?klBAw0d-dut6Ks3SNGKZtAqfSB1P'
-      }
-    })
-    .then(function (response) {
-      if (response.data) {
-        apiStatus.value = 1
-        databaseConfig.value.server = response.data.host
-        databaseConfig.value.port = response.data.port
-        databaseConfig.value.user = response.data.user
-        databaseConfig.value.password = response.data.password
-        databaseConfig.value.database = response.data.database
-      } else {
-        apiStatus.value = 0
-      }
-    })
-    .catch(function () {
-      apiStatus.value = 0
-    })
-    .finally(function () {
-      // Send the database config to the main process
-      ipcRenderer.send('set-database-config', JSON.stringify(databaseConfig), dirname)
-    })
+  ipcRenderer.on('connect-local-response', (event, result) => {
+    if (result.success) {
+      console.log('connected')
+      databaseStatus.value = 1
+    } else {
+      status.value = 'Resync'
+      message.value = 'Please check the local database connection.'
+      databaseStatus.value = 0
+    }
+  })
 }
 
 const syncData = async () => {
@@ -65,41 +70,47 @@ const syncData = async () => {
 
     await new Promise((resolve) => setTimeout(resolve, 5000))
 
-    axios
-      .get('https://node1.jrdemadara.dev/api/v1/uri/check_update', {
-        headers: {
-          authorization:
-            'softspark@zgmEl=Z4Bqdm402RuNJg17RAP9kGKYq8SbrNNlRdnygJws!n5XE1Ob=mmElEQLUjYOEiYDUkPJtFHccFuaLrt9u6uCPIonOfrq/4MqojK!vOgIp4CSS8aj?0um7fH4jcWOCBWZFkn844WGuySOxY-Hkkj0P-AwXOi7pMjP!PJ3DBLUZi6LTtio/MY?BWbynV8HTPGAoLBqvzu0RC6TXGIFvzw?klBAw0d-dut6Ks3SNGKZtAqfSB1P'
-        }
-      })
-      .then(function (response) {
-        if (response.data.count > 0) {
+    if (apiStatus.value === 1) {
+      try {
+        const response = await axios.get('https://testadmin.myibp.ph/id-data?page=1', {
+          headers: { Authorization: `Bearer ${accessToken.value}` }
+        })
+
+        const {
+          _embedded: { id_data: newData }
+        } = response.data
+
+        if (newData.length > 0) {
           status.value = 'Synchronizing'
-          message.value = `Synchronizing ${response.data.count} data...`
-          //Save data to sql
-          ipcRenderer.send('insert-data', JSON.stringify(response.data))
+          message.value = `Synchronizing ${newData.length} new data...`
+
+          ipcRenderer.send('insert-data', JSON.stringify(newData))
+
           ipcRenderer.on('insert-data-response', (event, result) => {
-            if (result.success == true) {
+            if (result.success) {
               status.value = 'Completed'
-              message.value = `Database is up to date.`
+              message.value = 'Database is up to date.'
             } else {
               status.value = 'Resync'
-              message.value = `Error migrating data.`
+              message.value = 'Error migrating data.'
             }
           })
         } else {
           loading.value = false
           status.value = 'Resync'
           message.value = 'Database is up to date.'
-          console.log(response.data)
         }
-      })
-      .catch(function (error) {
+      } catch (error) {
         console.log(error)
-      })
-      .finally(function () {})
+      }
+    }
   }
 }
+
+onMounted(() => {
+  authenticate()
+  checkLocalDatabase()
+})
 </script>
 
 <template>
@@ -117,7 +128,15 @@ const syncData = async () => {
             class="animate-pulse w-3 h-3 rounded-badge mr-1"
             :class="{ 'bg-green-500': apiStatus == 1, 'bg-red-500': apiStatus == 0 }"
           ></div>
-          <p class="text-sm">Online</p>
+          <p class="text-sm">API Status</p>
+        </div>
+
+        <div class="flex justify-center items-center mr-4">
+          <div
+            class="animate-pulse w-3 h-3 rounded-badge mr-1"
+            :class="{ 'bg-green-500': databaseStatus == 1, 'bg-red-500': databaseStatus == 0 }"
+          ></div>
+          <p class="text-sm">DB Status</p>
         </div>
 
         <HelpCircle :size="24" :stroke-width="1" class="text-slate-50" @click="section = 'about'" />

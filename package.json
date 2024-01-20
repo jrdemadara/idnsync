@@ -19,7 +19,9 @@
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
-    "axios": "^1.6.3",
+    "@scienta/axios-oauth2": "^1.2.1",
+    "axios": "^1.6.5",
+    "axios-oauth-client": "^2.0.4",
     "electron-updater": "^6.1.1",
     "lucide-vue-next": "^0.294.0",
     "mssql": "^10.0.1"

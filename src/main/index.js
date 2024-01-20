@@ -90,14 +90,23 @@ ipcMain.on('get-dirname', (event) => {
 })
 
 // Handle the configuration from the renderer process
-ipcMain.on('set-database-config', (event, config) => {
-  if (dbConnection) {
-    dbConnection.close()
-    console.log('Disconnected from the previous MSSQL database')
-  }
+ipcMain.on('set-database-config', async (event, config) => {
+  try {
+    if (dbConnection) {
+      dbConnection.close()
+      console.log('Disconnected from the previous MSSQL database')
+    }
 
-  // Set up the new database connection
-  connectToDatabase(config)
+    // Set up the new database connection
+    const isConnected = await connectToDatabase(config)
+
+    // Send a response to the renderer process
+    event.sender.send('connect-local-response', { success: isConnected })
+  } catch (error) {
+    console.error('Error handling database configuration', error)
+    // Send an error response to the renderer process
+    event.sender.send('connect-local-response', { success: false, error: error.message })
+  }
 })
 
 // Function to create the database connection
@@ -106,8 +115,10 @@ async function connectToDatabase(config) {
     const parsedConfig = JSON.parse(config)
     dbConnection = await sql.connect(parsedConfig._value)
     console.log('Connected to MSSQL database')
+    return true
   } catch (err) {
     console.error('Error connecting to MSSQL database', err)
+    return false
   }
 }
 
@@ -116,16 +127,26 @@ ipcMain.on('insert-data', async (event, data) => {
   try {
     const parsedData = JSON.parse(data)
     const request = new sql.Request(dbConnection)
-    console.log(parsedData)
-    const query = `INSERT INTO tblDelegates (RecordID, Field1, Field2, Field3, Field4, Field5 ) VALUES (1,'123456', 'demadara', 'johnny', 'sunico', '12')`
+    for (const item of parsedData) {
+      console.log(item.roll_number)
+      const roll_number = item.roll_number
+      const fullname = `${item.last_name}, ${item.first_name} ${item.middle_name || ''}`.trim()
+      const birthdate = item.birth_date
+      const photo = item.photo
+      const chapter = item.chapter
+      const qrcode = item.qr_code_url
+      const signature = ''
+      //console.log(parsedData[1].roll_number)
+      const insertQuery = `INSERT INTO tblDelegates (Field1, Field2, Field3, Field4, Field5, Field6, Field7 ) VALUES ('${roll_number}', '${fullname}','${birthdate}', '${roll_number}', '${chapter}', '${qrcode}', '${roll_number}')`
+      const result = await request.query(insertQuery)
+      event.sender.send('insert-data-response', { success: true, result })
+    }
 
     // Replace @value1, @value2, ... with actual values from the 'data' object
 
     // Execute the query
-    const result = await request.query(query)
 
     // Send the response back to the renderer process
-    event.sender.send('insert-data-response', { success: true, result })
   } catch (error) {
     console.error('Error inserting data:', error)
 
