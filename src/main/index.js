@@ -3,15 +3,20 @@ import sql from 'mssql'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import sharp from 'sharp'
+import path from 'path'
+import os from 'os'
 
 let dbConnection
 let dirname
+let photoDirectory
+let signatureDirectory
 
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 520,
-    height: 470,
+    width: 550,
+    height: 540,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -90,6 +95,13 @@ ipcMain.on('get-dirname', (event) => {
 })
 
 // Handle the configuration from the renderer process
+
+ipcMain.on('set-directory-config', async (event, config) => {
+  const parsedConfig = JSON.parse(config)
+  photoDirectory = parsedConfig._rawValue.photo_directory
+  signatureDirectory = parsedConfig._rawValue.signature_directory
+})
+
 ipcMain.on('set-database-config', async (event, config) => {
   try {
     if (dbConnection) {
@@ -127,30 +139,40 @@ ipcMain.on('insert-data', async (event, data) => {
   try {
     const parsedData = JSON.parse(data)
     const request = new sql.Request(dbConnection)
+
     for (const item of parsedData) {
-      console.log(item.roll_number)
       const roll_number = item.roll_number
       const fullname = `${item.last_name}, ${item.first_name} ${item.middle_name || ''}`.trim()
       const birthdate = item.birth_date
-      const photo = item.photo
       const chapter = item.chapter
       const qrcode = item.qr_code_url
-      const signature = ''
-      //console.log(parsedData[1].roll_number)
-      const insertQuery = `INSERT INTO tblDelegates (Field1, Field2, Field3, Field4, Field5, Field6, Field7 ) VALUES ('${roll_number}', '${fullname}','${birthdate}', '${roll_number}', '${chapter}', '${qrcode}', '${roll_number}')`
-      const result = await request.query(insertQuery)
-      event.sender.send('insert-data-response', { success: true, result })
+
+      const photoBuffer = Buffer.from(item.photo, 'base64')
+
+      const picturesDir = path.join(os.homedir(), photoDirectory)
+      const pngFilePath = path.join(picturesDir, `${roll_number}.png`)
+
+      await sharp(photoBuffer).toFormat('png').toFile(pngFilePath)
+
+      // Use parameterized query to prevent SQL injection
+      const insertQuery = `
+        INSERT INTO tblDelegates (Field1, Field2, Field3, Field4, Field5, Field6, Field7)
+        VALUES (@roll_number, @fullname, @birthdate, @chapter, @qrcode, @photoPath)
+      `
+
+      await request
+        .input('roll_number', sql.VarChar, roll_number)
+        .input('fullname', sql.NVarChar, fullname)
+        .input('birthdate', sql.Date, birthdate)
+        .input('chapter', sql.VarChar, chapter)
+        .input('qrcode', sql.VarChar, qrcode)
+        .input('photoPath', sql.VarChar, pngFilePath)
+        .query(insertQuery)
+
+      event.sender.send('insert-data-response', { success: true })
     }
-
-    // Replace @value1, @value2, ... with actual values from the 'data' object
-
-    // Execute the query
-
-    // Send the response back to the renderer process
   } catch (error) {
     console.error('Error inserting data:', error)
-
-    // Send the error back to the renderer process
     event.sender.send('insert-data-response', { success: false, error: error.message })
   }
 })

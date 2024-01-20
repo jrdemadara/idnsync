@@ -19,12 +19,14 @@
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
+    "@img/sharp-linux-x64": "^0.33.2",
     "@scienta/axios-oauth2": "^1.2.1",
     "axios": "^1.6.5",
     "axios-oauth-client": "^2.0.4",
     "electron-updater": "^6.1.1",
     "lucide-vue-next": "^0.294.0",
-    "mssql": "^10.0.1"
+    "mssql": "^10.0.1",
+    "sharp": "^0.33.2"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.1",

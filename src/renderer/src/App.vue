@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import oauth from 'axios-oauth-client'
 import { Settings, HelpCircle, Database } from 'lucide-vue-next'
+import configData from '@renderer/assets/config.json'
 
 // Import ipcRenderer using require from Electron
 const { ipcRenderer } = require('electron')
@@ -11,6 +12,14 @@ const { ipcRenderer } = require('electron')
 const dirname = ipcRenderer.sendSync('get-dirname')
 
 // Initialize reactive variables using ref
+const server = ref('')
+const port = ref('')
+const user = ref('')
+const password = ref('')
+const database = ref('')
+const photo_directory = ref('')
+const signature_directory = ref('')
+
 const apiStatus = ref(0)
 const databaseStatus = ref(0)
 const section = ref('main')
@@ -35,19 +44,29 @@ const authenticate = async () => {
 }
 
 const databaseConfig = ref({
-  server: '192.168.0.200\\SQLEXPRESS',
-  port: 1433,
-  user: 'sa',
-  password: 'admin',
-  database: 'RFIDSystem',
+  server: configData.database.server,
+  port: configData.database.port,
+  user: configData.database.user,
+  password: configData.database.password,
+  database: configData.database.database,
   options: {
     encrypt: false,
     trustServerCertificate: true
   }
 })
 
+const directoryConfig = ref({
+  photo_directory: configData.directory.photo_directory,
+  signature_directory: configData.directory.signature_directory
+})
+
 const checkLocalDatabase = async () => {
   const configJson = JSON.stringify(databaseConfig)
+  server.value = configData.database.server
+  port.value = configData.database.port
+  user.value = configData.database.user
+  password.value = configData.database.password
+  database.value = configData.database.database
   ipcRenderer.send('set-database-config', configJson, dirname)
 
   ipcRenderer.on('connect-local-response', (event, result) => {
@@ -60,6 +79,13 @@ const checkLocalDatabase = async () => {
       databaseStatus.value = 0
     }
   })
+}
+
+const loadDirectory = async () => {
+  const configJson = JSON.stringify(directoryConfig)
+  photo_directory.value = configData.directory.photo_directory
+  signature_directory.value = configData.directory.signature_directory
+  ipcRenderer.send('set-directory-config', configJson, dirname)
 }
 
 const syncData = async () => {
@@ -107,8 +133,10 @@ const syncData = async () => {
   }
 }
 
+const saveConfig = async () => {}
 onMounted(() => {
   authenticate()
+  loadDirectory()
   checkLocalDatabase()
 })
 </script>
@@ -189,48 +217,113 @@ onMounted(() => {
     </div>
 
     <div v-show="section == 'settings'" class="flex flex-col w-screen h-screen px-5 mt-2">
-      <h2 class="text-primary font-bold uppercase">Connection Settings</h2>
-      <div class="grid grid-cols-2 gap-4 gap-y-1 mt-6">
-        <label class="form-control w-full max-w-xs">
-          <div class="label">
-            <span class="label-text">Hostname</span>
+      <div class="join join-vertical w-full">
+        <div class="collapse collapse-arrow join-item border border-base-300">
+          <input type="radio" name="my-accordion-4" checked="checked" />
+          <div class="collapse-title text-base font-medium">Database Settings</div>
+          <div class="collapse-content">
+            <div class="grid grid-cols-2 gap-4 gap-y-1">
+              <label class="form-control w-full max-w-xs">
+                <div class="label">
+                  <span class="label-text">Hostname</span>
+                </div>
+                <input
+                  v-model="server"
+                  type="text"
+                  placeholder=""
+                  class="input input-sm input-bordered w-full max-w-xs"
+                />
+              </label>
+              <label class="form-control w-full max-w-xs">
+                <div class="label">
+                  <span class="label-text">Port</span>
+                </div>
+                <input
+                  v-model="port"
+                  type="text"
+                  placeholder=""
+                  class="input input-sm input-bordered w-full max-w-xs"
+                />
+              </label>
+              <label class="form-control w-full max-w-xs">
+                <div class="label">
+                  <span class="label-text">Username</span>
+                </div>
+                <input
+                  v-model="user"
+                  type="text"
+                  placeholder=""
+                  class="input input-sm input-bordered w-full max-w-xs"
+                />
+              </label>
+              <label class="form-control w-full max-w-xs">
+                <div class="label">
+                  <span class="label-text">Password</span>
+                </div>
+                <input
+                  v-model="password"
+                  type="password"
+                  placeholder=""
+                  class="input input-sm input-bordered w-full max-w-xs"
+                />
+              </label>
+              <label class="form-control w-full max-w-xs">
+                <div class="label">
+                  <span class="label-text">Database</span>
+                </div>
+                <input
+                  v-model="database"
+                  type="text"
+                  placeholder=""
+                  class="input input-sm input-bordered w-full max-w-xs"
+                />
+              </label>
+            </div>
           </div>
-          <input type="text" placeholder="" class="input input-sm input-bordered w-full max-w-xs" />
-        </label>
-        <label class="form-control w-full max-w-xs">
-          <div class="label">
-            <span class="label-text">Port</span>
+        </div>
+        <div class="collapse collapse-arrow join-item border border-base-300">
+          <input type="radio" name="my-accordion-4" />
+          <div class="collapse-title text-base font-medium">Directory Settings</div>
+          <div class="collapse-content">
+            <div class="grid grid-cols-2 gap-4 gap-y-1">
+              <label class="form-control w-full max-w-xs">
+                <div class="label">
+                  <span class="label-text">Photo Directory</span>
+                </div>
+                <input
+                  v-model="photo_directory"
+                  type="text"
+                  placeholder=""
+                  class="input input-sm input-bordered w-full max-w-xs"
+                />
+              </label>
+              <label class="form-control w-full max-w-xs">
+                <div class="label">
+                  <span class="label-text">Signature Directory</span>
+                </div>
+                <input
+                  v-model="signature_directory"
+                  type="text"
+                  placeholder=""
+                  class="input input-sm input-bordered w-full max-w-xs"
+                />
+              </label>
+            </div>
           </div>
-          <input type="text" placeholder="" class="input input-sm input-bordered w-full max-w-xs" />
-        </label>
-        <label class="form-control w-full max-w-xs">
-          <div class="label">
-            <span class="label-text">Username</span>
-          </div>
-          <input type="text" placeholder="" class="input input-sm input-bordered w-full max-w-xs" />
-        </label>
-        <label class="form-control w-full max-w-xs">
-          <div class="label">
-            <span class="label-text">Password</span>
-          </div>
-          <input type="text" placeholder="" class="input input-sm input-bordered w-full max-w-xs" />
-        </label>
-        <label class="form-control w-full max-w-xs">
-          <div class="label">
-            <span class="label-text">Database/Schema</span>
-          </div>
-          <input type="text" placeholder="" class="input input-sm input-bordered w-full max-w-xs" />
-        </label>
+        </div>
       </div>
-      <div class="divider mt-6"></div>
+
+      <div class="divider"></div>
       <div class="flex flex-row justify-between items-center">
         <div v-show="testing == true" class="flex flex-col justify-center items-center h-fit">
           <progress class="progress w-56"></progress>
           <p class="mt-2">Testing Connection...</p>
         </div>
         <div class="flex">
-          <button class="btn btn-neutral mr-5" @click="getLocalConnection">Test Connection</button>
-          <button class="btn btn-primary text-slate-50" @click="section = 'main'">
+          <button class="btn btn-sm btn-neutral mr-5" @click="getLocalConnection">
+            Test Connection
+          </button>
+          <button class="btn btn-sm btn-primary text-slate-50" @click="section = 'main'">
             Save & Exit
           </button>
         </div>

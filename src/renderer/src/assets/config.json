@@ -1,0 +1,17 @@
+{
+  "database": {
+    "server": "127.0.0.1",
+    "port": 1433,
+    "user": "sa",
+    "password": "$Fhiwzxe6124",
+    "database": "RFIDSystem",
+    "options": {
+      "encrypt": false,
+      "trustServerCertificate": true
+    }
+  },
+  "directory": {
+    "photo_directory": "/Documents/IDnow/Photo",
+    "signature_directory": "/Documents/IDnow/Signature"
+  }
+}
