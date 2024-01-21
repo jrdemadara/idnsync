@@ -27,6 +27,8 @@ function createWindow() {
     }
   })
 
+  mainWindow.webContents.openDevTools()
+
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
   })
@@ -125,8 +127,10 @@ async function connectToDatabase(config) {
   try {
     const parsedConfig = JSON.parse(config)
     dbConnection = await sql.connect(parsedConfig._value)
+
     return true
   } catch (err) {
+    console.log(err)
     return false
   }
 }

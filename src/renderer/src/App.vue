@@ -2,8 +2,8 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import oauth from 'axios-oauth-client'
-import { Settings, HelpCircle, ExternalLink } from 'lucide-vue-next'
-import configData from '@renderer/assets/config.json'
+import { Settings, HelpCircle } from 'lucide-vue-next'
+//import configData from '@renderer/assets/config.json'
 
 // Import ipcRenderer using require from Electron
 const { ipcRenderer } = require('electron')
@@ -29,6 +29,40 @@ const status = ref('Synchronize')
 const message = ref('Click to synchronize data.')
 const accessToken = ref('0')
 
+const updateDatabaseConfig = () => {
+  localStorage.setItem('server', server.value)
+  localStorage.setItem('port', port.value)
+  localStorage.setItem('user', user.value)
+  localStorage.setItem('password', password.value)
+  localStorage.setItem('database', database.value)
+  localStorage.setItem('photo_directory', photo_directory.value)
+  localStorage.setItem('signature_directory', signature_directory.value)
+}
+
+const defaultStatus = () => {
+  testing.value = false
+  loading.value = false
+  status.value = 'Synchronize'
+  message.value = 'Click to synchronize data.'
+}
+
+const databaseConfig = ref({
+  server: '192.168.0.200\\SQLEXPRESS',
+  port: '1433',
+  user: 'sa',
+  password: 'admin',
+  database: 'RFIDSystem',
+  options: {
+    encrypt: false,
+    trustServerCertificate: true
+  }
+})
+
+const directoryConfig = ref({
+  photo_directory: localStorage.getItem('photo_directory'),
+  signature_directory: localStorage.getItem('signature_directory')
+})
+
 const authenticate = async () => {
   const getClientCredentials = oauth.clientCredentials(
     axios.create(),
@@ -43,40 +77,20 @@ const authenticate = async () => {
   }
 }
 
-const defaultStatus = async () => {
-  testing.value = false
-  loading.value = false
-  status.value = 'Synchronize'
-  message.value = 'Click to synchronize data.'
+const loadDatabase = () => {
+  server.value = databaseConfig.value.server
+  port.value = databaseConfig.value.port
+  user.value = databaseConfig.value.user
+  password.value = databaseConfig.value.password
+  database.value = databaseConfig.value.database
 }
 
-const databaseConfig = ref({
-  server: configData.database.server,
-  port: configData.database.port,
-  user: configData.database.user,
-  password: configData.database.password,
-  database: configData.database.database,
-  options: {
-    encrypt: false,
-    trustServerCertificate: true
-  }
-})
-
-const directoryConfig = ref({
-  photo_directory: configData.directory.photo_directory,
-  signature_directory: configData.directory.signature_directory
-})
-
 const checkLocalDatabase = async () => {
-  const configJson = JSON.stringify(databaseConfig)
-  server.value = configData.database.server
-  port.value = configData.database.port
-  user.value = configData.database.user
-  password.value = configData.database.password
-  database.value = configData.database.database
-  ipcRenderer.send('set-database-config', configJson, dirname)
+  const config = JSON.stringify(databaseConfig)
+  ipcRenderer.send('set-database-config', config, dirname)
 
   ipcRenderer.on('connect-local-response', (event, result) => {
+    console.log(result)
     if (result.success) {
       databaseStatus.value = 1
     } else {
@@ -89,8 +103,8 @@ const checkLocalDatabase = async () => {
 
 const loadDirectory = async () => {
   const configJson = JSON.stringify(directoryConfig)
-  photo_directory.value = configData.directory.photo_directory
-  signature_directory.value = configData.directory.signature_directory
+  photo_directory.value = localStorage.getItem('photo_directory')
+  signature_directory.value = localStorage.getItem('signature_directory')
   ipcRenderer.send('set-directory-config', configJson, dirname)
 }
 
@@ -148,9 +162,9 @@ const syncData = async () => {
   }
 }
 
-const saveConfig = async () => {}
 onMounted(() => {
   authenticate()
+  loadDatabase()
   loadDirectory()
   checkLocalDatabase()
 })
@@ -335,10 +349,10 @@ onMounted(() => {
           <p class="mt-2">Testing Connection...</p>
         </div>
         <div class="flex">
-          <button class="btn btn-sm btn-neutral mr-5" @click="getLocalConnection">
+          <button class="btn btn-sm btn-neutral mr-5" @click="checkLocalDatabase">
             Test Connection
           </button>
-          <button class="btn btn-sm btn-primary text-slate-50" @click="section = 'main'">
+          <button class="btn btn-sm btn-primary text-slate-50" @click="updateDatabaseConfig">
             Save & Exit
           </button>
         </div>
