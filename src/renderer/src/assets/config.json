@@ -1,9 +1,9 @@
 {
   "database": {
-    "server": "127.0.0.1",
+    "server": "192.168.0.200\\SQLEXPRESS",
     "port": 1433,
     "user": "sa",
-    "password": "$Fhiwzxe6124",
+    "password": "admin",
     "database": "RFIDSystem",
     "options": {
       "encrypt": false,

@@ -16,7 +16,7 @@ function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 550,
-    height: 540,
+    height: 515,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -106,7 +106,6 @@ ipcMain.on('set-database-config', async (event, config) => {
   try {
     if (dbConnection) {
       dbConnection.close()
-      console.log('Disconnected from the previous MSSQL database')
     }
 
     // Set up the new database connection
@@ -126,10 +125,8 @@ async function connectToDatabase(config) {
   try {
     const parsedConfig = JSON.parse(config)
     dbConnection = await sql.connect(parsedConfig._value)
-    console.log('Connected to MSSQL database')
     return true
   } catch (err) {
-    console.error('Error connecting to MSSQL database', err)
     return false
   }
 }
@@ -139,37 +136,36 @@ ipcMain.on('insert-data', async (event, data) => {
   try {
     const parsedData = JSON.parse(data)
     const request = new sql.Request(dbConnection)
-
     for (const item of parsedData) {
       const roll_number = item.roll_number
       const fullname = `${item.last_name}, ${item.first_name} ${item.middle_name || ''}`.trim()
       const birthdate = item.birth_date
       const chapter = item.chapter
       const qrcode = item.qr_code_url
-
+      //Convert blob to png & save to external directory
       const photoBuffer = Buffer.from(item.photo, 'base64')
-
       const picturesDir = path.join(os.homedir(), photoDirectory)
       const pngFilePath = path.join(picturesDir, `${roll_number}.png`)
-
       await sharp(photoBuffer).toFormat('png').toFile(pngFilePath)
 
-      // Use parameterized query to prevent SQL injection
+      //TODO: Check database for duplicate entry before insert
       const insertQuery = `
+    IF EXISTS (SELECT 1 FROM tblDelegates WHERE Field1 = '${roll_number}')
+    BEGIN
+        UPDATE tblDelegates
+        SET Field2 = '${fullname}', Field3 = '${birthdate}', Field4 = '${roll_number}', Field5 = '${chapter}', Field6 = '${qrcode}', Field7 = '${roll_number}'
+        WHERE Field1 = '${roll_number}';
+    END
+    ELSE
+    BEGIN
         INSERT INTO tblDelegates (Field1, Field2, Field3, Field4, Field5, Field6, Field7)
-        VALUES (@roll_number, @fullname, @birthdate, @chapter, @qrcode, @photoPath)
-      `
-
-      await request
-        .input('roll_number', sql.VarChar, roll_number)
-        .input('fullname', sql.NVarChar, fullname)
-        .input('birthdate', sql.Date, birthdate)
-        .input('chapter', sql.VarChar, chapter)
-        .input('qrcode', sql.VarChar, qrcode)
-        .input('photoPath', sql.VarChar, pngFilePath)
-        .query(insertQuery)
-
-      event.sender.send('insert-data-response', { success: true })
+        VALUES ('${roll_number}', '${fullname}', '${birthdate}', '${roll_number}', '${chapter}', '${qrcode}', '${roll_number}');
+    END
+`
+      // Insert data to local database
+      //const insertQuery = `INSERT INTO tblDelegates (Field1, Field2, Field3, Field4, Field5, Field6, Field7 ) VALUES ('${roll_number}', '${fullname}','${birthdate}', '${roll_number}', '${chapter}', '${qrcode}', '${roll_number}')`
+      const result = await request.query(insertQuery)
+      event.sender.send('insert-data-response', { success: true, result })
     }
   } catch (error) {
     console.error('Error inserting data:', error)

@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import oauth from 'axios-oauth-client'
-import { Settings, HelpCircle, Database } from 'lucide-vue-next'
+import { Settings, HelpCircle, ExternalLink } from 'lucide-vue-next'
 import configData from '@renderer/assets/config.json'
 
 // Import ipcRenderer using require from Electron
@@ -71,7 +71,6 @@ const checkLocalDatabase = async () => {
 
   ipcRenderer.on('connect-local-response', (event, result) => {
     if (result.success) {
-      console.log('connected')
       databaseStatus.value = 1
     } else {
       status.value = 'Resync'
@@ -143,7 +142,7 @@ onMounted(() => {
 
 <template>
   <div class="flex flex-col w-screen h-screen bg-slate-950">
-    <header class="flex justify-between w-screen h-fit p-4 bg-transparent">
+    <header class="flex justify-between w-screen h-fit mt-2 px-2 bg-transparent">
       <div class="flex justify-center items-center">
         <img src="./assets/icon.png" alt="logo" class="w-10 mr-2" />
         <h4 class="font-bold text-slate-50 mr-1">
@@ -328,6 +327,16 @@ onMounted(() => {
           </button>
         </div>
       </div>
+    </div>
+
+    <div
+      v-show="section == 'about'"
+      class="flex flex-col justify-center items-center w-screen h-screen"
+    >
+      <img src="./assets/icon.png" alt="logo" class="w-36" />
+      <h2 class="text-xl">Built in <span class="text-cyan-200">Electron</span></h2>
+      <h2 class="text-base">Powered by <span class="text-green-600">Vue</span></h2>
+      <p class="text-indigo-600">https://jrdemadara.dev</p>
     </div>
   </div>
 </template>
