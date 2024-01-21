@@ -1,7 +1,7 @@
 {
-  "name": "idnow-updater",
+  "name": "IDNSync",
   "version": "1.0.0",
-  "description": "An Electron application with Vue",
+  "description": "Azitsorog data updater",
   "main": "./dist/main/index.js",
   "author": "jrdemadara",
   "license": "none",
@@ -23,7 +23,6 @@
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
     "@img/sharp-linux-x64": "^0.33.2",
-    "@scienta/axios-oauth2": "^1.2.1",
     "axios": "^1.6.5",
     "axios-oauth-client": "^2.0.4",
     "electron-squirrel-startup": "^1.0.0",

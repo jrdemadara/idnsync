@@ -43,6 +43,13 @@ const authenticate = async () => {
   }
 }
 
+const defaultStatus = async () => {
+  testing.value = false
+  loading.value = false
+  status.value = 'Synchronize'
+  message.value = 'Click to synchronize data.'
+}
+
 const databaseConfig = ref({
   server: configData.database.server,
   port: configData.database.port,
@@ -115,15 +122,24 @@ const syncData = async () => {
             if (result.success) {
               status.value = 'Completed'
               message.value = 'Database is up to date.'
+              setTimeout(function () {
+                defaultStatus()
+              }, 10000)
             } else {
               status.value = 'Resync'
               message.value = 'Error migrating data.'
+              setTimeout(function () {
+                defaultStatus()
+              }, 10000)
             }
           })
         } else {
           loading.value = false
           status.value = 'Resync'
           message.value = 'Database is up to date.'
+          setTimeout(function () {
+            defaultStatus()
+          }, 10000)
         }
       } catch (error) {
         console.log(error)
@@ -198,7 +214,7 @@ onMounted(() => {
               'bg-green-700 border-green-500 hover:bg-green-600 hover:border-green-400':
                 status == 'Completed'
             }"
-            class="w-64 h-64 rounded-full shadow-inner border-8 hover:transition hover:duration-300 hover:ease-in-out text-2xl text-slate-50"
+            class="w-64 h-64 rounded-full border-8 hover:transition hover:duration-300 hover:ease-in-out text-2xl text-slate-50"
             @click="syncData"
           >
             {{ status }}
@@ -335,7 +351,10 @@ onMounted(() => {
     >
       <img src="./assets/icon.png" alt="logo" class="w-36" />
       <h2 class="text-xl">Built in <span class="text-cyan-200">Electron</span></h2>
-      <h2 class="text-base">Powered by <span class="text-green-600">Vue</span></h2>
+      <h2 class="text-base">
+        Powered by <span class="text-fuchsia-500">Vite</span> +
+        <span class="text-green-600">Vue</span>
+      </h2>
       <p class="text-indigo-600">https://jrdemadara.dev</p>
     </div>
   </div>
