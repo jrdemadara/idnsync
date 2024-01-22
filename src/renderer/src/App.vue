@@ -88,7 +88,13 @@ const authenticate = async () => {
 }
 
 const checkLocalDatabase = async () => {
-  updateDatabaseConfig()
+  localStorage.setItem('server', server.value)
+  localStorage.setItem('port', port.value)
+  localStorage.setItem('user', user.value)
+  localStorage.setItem('password', password.value)
+  localStorage.setItem('database', database.value)
+  localStorage.setItem('photo_directory', photo_directory.value)
+  localStorage.setItem('signature_directory', signature_directory.value)
   databaseConfig.value.server = localStorage.getItem('server')
   databaseConfig.value.port = localStorage.getItem('port')
   databaseConfig.value.user = localStorage.getItem('user')
