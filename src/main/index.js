@@ -6,6 +6,7 @@ import icon from '../../resources/icon.png?asset'
 import sharp from 'sharp'
 import path from 'path'
 import os from 'os'
+const fs = require('fs')
 
 let dbConnection
 let dirname
@@ -164,11 +165,13 @@ ipcMain.on('insert-data', async (event, data) => {
       const birthdate = item.birth_date
       const chapter = item.chapter
       const qrcode = item.qr_code_url
-      //Convert blob to png & save to external directory
+      // Convert blob to PNG & save to external directory
       const photoBuffer = Buffer.from(item.photo, 'base64')
       const picturesDir = path.join(os.homedir(), photoDirectory)
       const pngFilePath = path.join(picturesDir, `${roll_number}.png`)
-      await sharp(photoBuffer).toFormat('png').toFile(pngFilePath)
+
+      // Save the buffer to a PNG file
+      fs.writeFileSync(pngFilePath, photoBuffer)
 
       //TODO: Check database for duplicate entry before insert
       const insertQuery = `

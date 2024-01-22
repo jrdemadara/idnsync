@@ -73,14 +73,6 @@ const updateDatabaseConfig = async () => {
   section.value = 'main'
 }
 
-const refreshDatabaseConfig = () => {
-  databaseConfig.value.server = localStorage.getItem('server')
-  databaseConfig.value.port = localStorage.getItem('port')
-  databaseConfig.value.user = localStorage.getItem('user')
-  databaseConfig.value.password = localStorage.getItem('password')
-  databaseConfig.value.database = localStorage.getItem('database')
-}
-
 const authenticate = async () => {
   const getClientCredentials = oauth.clientCredentials(
     axios.create(),
