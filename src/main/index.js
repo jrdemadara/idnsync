@@ -3,7 +3,6 @@ import sql from 'mssql'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import sharp from 'sharp'
 import path from 'path'
 import os from 'os'
 const fs = require('fs')
@@ -17,7 +16,7 @@ function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 550,
-    height: 515,
+    height: 525,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -27,8 +26,6 @@ function createWindow() {
       contextIsolation: false
     }
   })
-
-  mainWindow.webContents.openDevTools()
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()

@@ -22,14 +22,12 @@
   "dependencies": {
     "@electron-toolkit/preload": "^2.0.0",
     "@electron-toolkit/utils": "^2.0.0",
-    "@img/sharp-linux-x64": "^0.33.2",
     "axios": "^1.6.5",
     "axios-oauth-client": "^2.0.4",
     "electron-squirrel-startup": "^1.0.0",
     "electron-updater": "^6.1.1",
     "lucide-vue-next": "^0.294.0",
-    "mssql": "^10.0.1",
-    "sharp": "^0.33.2"
+    "mssql": "^10.0.1"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.2.0",
@@ -45,6 +43,7 @@
     "autoprefixer": "^10.4.16",
     "daisyui": "^4.4.20",
     "electron": "^25.6.0",
+    "electron-builder": "^24.9.1",
     "electron-vite": "^1.0.27",
     "eslint": "^8.47.0",
     "eslint-plugin-vue": "^9.17.0",

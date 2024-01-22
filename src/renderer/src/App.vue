@@ -416,6 +416,9 @@ onMounted(() => {
         <span class="text-green-600">Vue</span>
       </h2>
       <p class="text-indigo-600">https://jrdemadara.dev</p>
+      <button class="btn btn-sm btn-primary text-slate-50 w-24 mt-10" @click="section = 'main'">
+        Ok
+      </button>
     </div>
   </div>
 </template>
