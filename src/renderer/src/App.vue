@@ -27,17 +27,8 @@ const testing = ref(false)
 const loading = ref(false)
 const status = ref('Synchronize')
 const message = ref('Click to synchronize data.')
+const connectionStatus = ref('x')
 const accessToken = ref('0')
-
-const updateDatabaseConfig = () => {
-  localStorage.setItem('server', server.value)
-  localStorage.setItem('port', port.value)
-  localStorage.setItem('user', user.value)
-  localStorage.setItem('password', password.value)
-  localStorage.setItem('database', database.value)
-  localStorage.setItem('photo_directory', photo_directory.value)
-  localStorage.setItem('signature_directory', signature_directory.value)
-}
 
 const defaultStatus = () => {
   testing.value = false
@@ -63,6 +54,32 @@ const directoryConfig = ref({
   signature_directory: localStorage.getItem('signature_directory')
 })
 
+const loadDatabaseToUI = async () => {
+  server.value = databaseConfig.value.server
+  port.value = databaseConfig.value.port
+  user.value = databaseConfig.value.user
+  password.value = databaseConfig.value.password
+  database.value = databaseConfig.value.database
+}
+
+const updateDatabaseConfig = async () => {
+  localStorage.setItem('server', server.value)
+  localStorage.setItem('port', port.value)
+  localStorage.setItem('user', user.value)
+  localStorage.setItem('password', password.value)
+  localStorage.setItem('database', database.value)
+  localStorage.setItem('photo_directory', photo_directory.value)
+  localStorage.setItem('signature_directory', signature_directory.value)
+}
+
+const refreshDatabaseConfig = () => {
+  databaseConfig.value.server = localStorage.getItem('server')
+  databaseConfig.value.port = localStorage.getItem('port')
+  databaseConfig.value.user = localStorage.getItem('user')
+  databaseConfig.value.password = localStorage.getItem('password')
+  databaseConfig.value.database = localStorage.getItem('database')
+}
+
 const authenticate = async () => {
   const getClientCredentials = oauth.clientCredentials(
     axios.create(),
@@ -77,20 +94,35 @@ const authenticate = async () => {
   }
 }
 
-const loadDatabase = () => {
-  server.value = databaseConfig.value.server
-  port.value = databaseConfig.value.port
-  user.value = databaseConfig.value.user
-  password.value = databaseConfig.value.password
-  database.value = databaseConfig.value.database
+const checkLocalDatabase = async () => {
+  updateDatabaseConfig()
+  databaseConfig.value.server = localStorage.getItem('server')
+  databaseConfig.value.port = localStorage.getItem('port')
+  databaseConfig.value.user = localStorage.getItem('user')
+  databaseConfig.value.password = localStorage.getItem('password')
+  databaseConfig.value.database = localStorage.getItem('database')
+  const config = JSON.stringify(databaseConfig.value)
+  testing.value = true
+  console.log(config)
+  await new Promise((resolve) => setTimeout(resolve, 3000))
+  ipcRenderer.send('check-database-connection', config, dirname)
+  ipcRenderer.on('check_database-response', (event, result) => {
+    if (result.success) {
+      databaseStatus.value = 1
+      testing.value = false
+      connectionStatus.value = 1
+    } else {
+      databaseStatus.value = 0
+      testing.value = false
+      connectionStatus.value = 0
+    }
+  })
 }
 
-const checkLocalDatabase = async () => {
+const connectLocalDatabase = async () => {
   const config = JSON.stringify(databaseConfig.value)
   ipcRenderer.send('set-database-config', config, dirname)
-
   ipcRenderer.on('connect-local-response', (event, result) => {
-    console.log(result)
     if (result.success) {
       databaseStatus.value = 1
     } else {
@@ -164,9 +196,9 @@ const syncData = async () => {
 
 onMounted(() => {
   authenticate()
-  loadDatabase()
+  loadDatabaseToUI()
   loadDirectory()
-  checkLocalDatabase()
+  connectLocalDatabase()
 })
 </script>
 
@@ -348,6 +380,21 @@ onMounted(() => {
           <progress class="progress w-56"></progress>
           <p class="mt-2">Testing Connection...</p>
         </div>
+        <div v-show="testing == false">
+          <div
+            v-show="connectionStatus == 1"
+            class="flex flex-col justify-center items-center h-fit"
+          >
+            <p class="mt-2 text-green-600">Connection Established</p>
+          </div>
+          <div
+            v-show="connectionStatus == 0"
+            class="flex flex-col justify-center items-center h-fit"
+          >
+            <p class="mt-2 text-red-600">Failed to connect</p>
+          </div>
+        </div>
+
         <div class="flex">
           <button class="btn btn-sm btn-neutral mr-5" @click="checkLocalDatabase">
             Test Connection

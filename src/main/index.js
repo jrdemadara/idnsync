@@ -122,6 +122,24 @@ ipcMain.on('set-database-config', async (event, config) => {
   }
 })
 
+ipcMain.on('check-database-connection', async (event, config) => {
+  try {
+    if (dbConnection) {
+      dbConnection.close()
+    }
+
+    // Set up the new database connection
+    const isConnected = await connectToDatabase(config)
+
+    // Send a response to the renderer process
+    event.sender.send('check_database-response', { success: isConnected })
+  } catch (error) {
+    console.error('Error handling database configuration', error)
+    // Send an error response to the renderer process
+    event.sender.send('check_database-response', { success: false, error: error.message })
+  }
+})
+
 // Function to create the database connection
 async function connectToDatabase(config) {
   try {
