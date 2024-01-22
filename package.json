@@ -2,7 +2,7 @@
   "name": "IDNSync",
   "version": "1.0.0",
   "description": "Azitsorog data updater",
-  "main": "./dist/main/index.js",
+  "main": "./out/main/index.js",
   "author": "jrdemadara",
   "license": "none",
   "homepage": "https://www.jrdemadara.dev",

@@ -47,11 +47,11 @@ const defaultStatus = () => {
 }
 
 const databaseConfig = ref({
-  server: '192.168.0.200\\SQLEXPRESS',
-  port: '1433',
-  user: 'sa',
-  password: 'admin',
-  database: 'RFIDSystem',
+  server: localStorage.getItem('server'),
+  port: localStorage.getItem('port'),
+  user: localStorage.getItem('user'),
+  password: localStorage.getItem('password'),
+  database: localStorage.getItem('database'),
   options: {
     encrypt: false,
     trustServerCertificate: true
@@ -86,7 +86,7 @@ const loadDatabase = () => {
 }
 
 const checkLocalDatabase = async () => {
-  const config = JSON.stringify(databaseConfig)
+  const config = JSON.stringify(databaseConfig.value)
   ipcRenderer.send('set-database-config', config, dirname)
 
   ipcRenderer.on('connect-local-response', (event, result) => {

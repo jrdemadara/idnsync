@@ -126,7 +126,7 @@ ipcMain.on('set-database-config', async (event, config) => {
 async function connectToDatabase(config) {
   try {
     const parsedConfig = JSON.parse(config)
-    dbConnection = await sql.connect(parsedConfig._value)
+    dbConnection = await sql.connect(parsedConfig)
 
     return true
   } catch (err) {
