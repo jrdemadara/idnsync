@@ -70,6 +70,7 @@ const updateDatabaseConfig = async () => {
   localStorage.setItem('database', database.value)
   localStorage.setItem('photo_directory', photo_directory.value)
   localStorage.setItem('signature_directory', signature_directory.value)
+  section.value = 'main'
 }
 
 const refreshDatabaseConfig = () => {
