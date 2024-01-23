@@ -16,7 +16,7 @@ function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 550,
-    height: 525,
+    height: 540,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -158,7 +158,9 @@ ipcMain.on('insert-data', async (event, data) => {
     const request = new sql.Request(dbConnection)
     for (const item of parsedData) {
       const roll_number = item.roll_number
-      const fullname = `${item.last_name}, ${item.first_name} ${item.middle_name || ''}`.trim()
+      const lastname = item.last_name
+      const firstname = item.first_name
+      const middlename = item.middle_name
       const birthdate = item.birth_date
       const chapter = item.chapter
       const qrcode = item.qr_code_url
@@ -172,16 +174,16 @@ ipcMain.on('insert-data', async (event, data) => {
 
       //TODO: Check database for duplicate entry before insert
       const insertQuery = `
-    IF EXISTS (SELECT 1 FROM tblDelegates WHERE Field1 = '${roll_number}')
+    IF EXISTS (SELECT 1 FROM tblDelegates WHERE Field2 = '${roll_number}')
     BEGIN
         UPDATE tblDelegates
-        SET Field2 = '${fullname}', Field3 = '${birthdate}', Field4 = '${roll_number}', Field5 = '${chapter}', Field6 = '${qrcode}', Field7 = '${roll_number}'
+        SET Field3 = '${lastname}', Field4 = '${firstname}', Field5 = '${middlename}', Field6 = '${birthdate}', Field7 = '${chapter}', Field8 = '${qrcode}', Field9 = '${roll_number}', Field10 = '${roll_number}'
         WHERE Field1 = '${roll_number}';
     END
     ELSE
     BEGIN
-        INSERT INTO tblDelegates (Field1, Field2, Field3, Field4, Field5, Field6, Field7)
-        VALUES ('${roll_number}', '${fullname}', '${birthdate}', '${roll_number}', '${chapter}', '${qrcode}', '${roll_number}');
+        INSERT INTO tblDelegates (Field2, Field3, Field4, Field5, Field6, Field7, Field8, Field9, Field10)
+        VALUES ('${roll_number}','${lastname}', '${firstname}', '${middlename}', '${birthdate}', '${chapter}', '${qrcode}', '${roll_number}', '${roll_number}');
     END
 `
       // Insert data to local database
