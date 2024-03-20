@@ -16,7 +16,7 @@ function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 550,
-    height: 540,
+    height: 600,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -165,13 +165,17 @@ ipcMain.on('insert-data', async (event, data) => {
       const chapter = item.chapter
       const qrcode = item.qr_code_url
       // Convert blob to PNG & save to external directory
-      const photoBuffer = Buffer.from(item.photo, 'base64')
-      const picturesDir = path.join(os.homedir(), photoDirectory)
-      const pngFilePath = path.join(picturesDir, `${roll_number}.png`)
+      const photoBuffer = item.photo !== null ? Buffer.from(item.photo, 'base64') : ''
+      const photoDir = path.join(os.homedir(), photoDirectory)
+      const photoFilePath = path.join(photoDir, `${roll_number}.png`)
+
+      const signatureBuffer = item.signature !== null ? Buffer.from(item.signature, 'base64') : ''
+      const signatureDir = path.join(os.homedir(), signatureDirectory)
+      const signatureFilePath = path.join(signatureDir, `${roll_number}.png`)
 
       // Save the buffer to a PNG file
-      fs.writeFileSync(pngFilePath, photoBuffer)
-
+      fs.writeFileSync(photoFilePath, photoBuffer)
+      fs.writeFileSync(signatureFilePath, signatureBuffer)
       //TODO: Check database for duplicate entry before insert
       const insertQuery = `
     IF EXISTS (SELECT * FROM tblDelegates WHERE Field2 = '${roll_number}')

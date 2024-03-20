@@ -17,8 +17,13 @@ const port = ref('')
 const user = ref('')
 const password = ref('')
 const database = ref('')
+
 const photo_directory = ref('')
 const signature_directory = ref('')
+
+const endpoint = ref('')
+const clientID = ref('')
+const clientSecret = ref('')
 
 const apiStatus = ref(0)
 const databaseStatus = ref(0)
@@ -27,7 +32,8 @@ const testing = ref(false)
 const loading = ref(false)
 const status = ref('Synchronize')
 const message = ref('Click to synchronize data.')
-const connectionStatus = ref('x')
+const databaseConnectionStatus = ref('x')
+
 const accessToken = ref('0')
 
 const defaultStatus = () => {
@@ -49,6 +55,12 @@ const databaseConfig = ref({
   }
 })
 
+const apiConfig = ref({
+  endpoint: localStorage.getItem('endpoint'),
+  clientID: localStorage.getItem('client_id'),
+  clientSecret: localStorage.getItem('client_secret')
+})
+
 const directoryConfig = ref({
   photo_directory: localStorage.getItem('photo_directory'),
   signature_directory: localStorage.getItem('signature_directory')
@@ -62,28 +74,52 @@ const loadDatabaseToUI = async () => {
   database.value = databaseConfig.value.database
 }
 
-const updateDatabaseConfig = async () => {
+const loadApiToUI = async () => {
+  endpoint.value = apiConfig.value.endpoint
+  clientID.value = apiConfig.value.clientID
+  clientSecret.value = apiConfig.value.clientSecret
+}
+
+const updateConfig = async () => {
+  // database settings storage
   localStorage.setItem('server', server.value)
   localStorage.setItem('port', port.value)
   localStorage.setItem('user', user.value)
   localStorage.setItem('password', password.value)
   localStorage.setItem('database', database.value)
+  // directory settings storage
   localStorage.setItem('photo_directory', photo_directory.value)
   localStorage.setItem('signature_directory', signature_directory.value)
+  // api setttings storage
+  localStorage.setItem(
+    'endpoint',
+    endpoint.value.endsWith('/') ? endpoint.value.slice(0, -1) : endpoint.value
+  )
+  localStorage.setItem('client_id', clientID.value)
+  localStorage.setItem('client_secret', clientSecret.value)
+
   section.value = 'main'
 }
 
 const authenticate = async () => {
+  console.log(apiConfig.value.clientID)
   const getClientCredentials = oauth.clientCredentials(
     axios.create(),
-    'https://testadmin.myibp.ph/oauth',
-    'id_now',
-    'w7EJ7BkT943ZtmXoHKlkhYRca0R4IcrO'
+    `${apiConfig.value.endpoint}/oauth`,
+    apiConfig.value.clientID,
+    apiConfig.value.clientSecret
   )
-  const auth = await getClientCredentials('printer', 'client_credentials')
-  accessToken.value = auth.access_token
-  if (auth.access_token) {
-    apiStatus.value = 1
+
+  try {
+    const auth = await getClientCredentials('printer', 'client_credentials')
+    accessToken.value = auth.access_token
+    if (auth.access_token) {
+      apiStatus.value = 1
+    } else {
+      apiStatus.value = 0
+    }
+  } catch (e) {
+    apiStatus.value = 0
   }
 }
 
@@ -93,27 +129,39 @@ const checkLocalDatabase = async () => {
   localStorage.setItem('user', user.value)
   localStorage.setItem('password', password.value)
   localStorage.setItem('database', database.value)
+
   localStorage.setItem('photo_directory', photo_directory.value)
   localStorage.setItem('signature_directory', signature_directory.value)
+
+  localStorage.setItem('endpoint', endpoint.value)
+  localStorage.setItem('client_id', clientID.value)
+  localStorage.setItem('client_secret', clientSecret.value)
+
   databaseConfig.value.server = localStorage.getItem('server')
   databaseConfig.value.port = localStorage.getItem('port')
   databaseConfig.value.user = localStorage.getItem('user')
   databaseConfig.value.password = localStorage.getItem('password')
   databaseConfig.value.database = localStorage.getItem('database')
+
+  apiConfig.value.endpoint = localStorage.getItem('endpoint')
+  apiConfig.value.clientID = localStorage.getItem('client_id')
+  apiConfig.value.clientSecret = localStorage.getItem('client_secret')
+
   const config = JSON.stringify(databaseConfig.value)
   testing.value = true
-  console.log(config)
+
   await new Promise((resolve) => setTimeout(resolve, 3000))
+  authenticate()
   ipcRenderer.send('check-database-connection', config, dirname)
   ipcRenderer.on('check_database-response', (event, result) => {
     if (result.success) {
       databaseStatus.value = 1
       testing.value = false
-      connectionStatus.value = 1
+      databaseConnectionStatus.value = 1
     } else {
       databaseStatus.value = 0
       testing.value = false
-      connectionStatus.value = 0
+      databaseConnectionStatus.value = 0
     }
   })
 }
@@ -149,7 +197,7 @@ const syncData = async () => {
 
     if (apiStatus.value === 1) {
       try {
-        const response = await axios.get('https://testadmin.myibp.ph/id-data?page=1', {
+        const response = await axios.get(`${endpoint.value}/id-data?page=1`, {
           headers: { Authorization: `Bearer ${accessToken.value}` }
         })
 
@@ -196,6 +244,7 @@ const syncData = async () => {
 onMounted(() => {
   authenticate()
   loadDatabaseToUI()
+  loadApiToUI()
   loadDirectory()
   connectLocalDatabase()
 })
@@ -207,7 +256,7 @@ onMounted(() => {
       <div class="flex justify-center items-center">
         <img src="./assets/icon.png" alt="logo" class="w-10 mr-2" />
         <h4 class="font-bold text-slate-50 mr-1">
-          IDNSync <span class="font-light text-xs font-mono">v1.0</span>
+          IDNSync <span class="font-light text-xs font-mono">v1.1.20</span>
         </h4>
       </div>
       <div class="flex justify-center items-center">
@@ -348,10 +397,61 @@ onMounted(() => {
             <div class="grid grid-cols-2 gap-4 gap-y-1">
               <label class="form-control w-full max-w-xs">
                 <div class="label">
-                  <span class="label-text">Photo Directory</span>
+                  <span class="label-text"
+                    >Photo Directory<small class="text-orange-500"
+                      >(w/o trailing slash)</small
+                    ></span
+                  >
                 </div>
                 <input
                   v-model="photo_directory"
+                  type="text"
+                  placeholder="e.g., /Documents/IDnow/Photo"
+                  class="input input-sm input-bordered w-full max-w-xs"
+                />
+              </label>
+              <label class="form-control w-full max-w-xs">
+                <div class="label">
+                  <span class="label-text"
+                    >Signature Directory<small class="text-orange-500"
+                      >(w/o trailing slash)</small
+                    ></span
+                  >
+                </div>
+                <input
+                  v-model="signature_directory"
+                  type="text"
+                  placeholder="e.g., /Documents/IDnow/Signature"
+                  class="input input-sm input-bordered w-full max-w-xs"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="collapse collapse-arrow join-item border border-base-300">
+          <input type="radio" name="my-accordion-4" />
+          <div class="collapse-title text-base font-medium">API Settings</div>
+          <div class="collapse-content">
+            <div class="grid grid-cols-2 gap-4 gap-y-1">
+              <label class="form-control w-full max-w-xs">
+                <div class="label">
+                  <span class="label-text"
+                    >Endpoint <small class="text-orange-500">(w/o trailing slash)</small></span
+                  >
+                </div>
+                <input
+                  v-model="endpoint"
+                  type="text"
+                  placeholder="e.g., https://yourdomain.com"
+                  class="input input-sm input-bordered w-full max-w-xs"
+                />
+              </label>
+              <label class="form-control w-full max-w-xs">
+                <div class="label">
+                  <span class="label-text">Client ID</span>
+                </div>
+                <input
+                  v-model="clientID"
                   type="text"
                   placeholder=""
                   class="input input-sm input-bordered w-full max-w-xs"
@@ -359,10 +459,10 @@ onMounted(() => {
               </label>
               <label class="form-control w-full max-w-xs">
                 <div class="label">
-                  <span class="label-text">Signature Directory</span>
+                  <span class="label-text">Client Secret</span>
                 </div>
                 <input
-                  v-model="signature_directory"
+                  v-model="clientSecret"
                   type="text"
                   placeholder=""
                   class="input input-sm input-bordered w-full max-w-xs"
@@ -382,15 +482,18 @@ onMounted(() => {
         <div v-show="testing == false">
           <div
             v-show="connectionStatus == 1"
-            class="flex flex-col justify-center items-center h-fit"
+            class="flex flex-col justify-start items-center h-fit"
           >
-            <p class="mt-2 text-green-600">Connection Established</p>
+            <p class="mt-2 text-green-600 text-start">Database Connection Established</p>
           </div>
           <div
             v-show="connectionStatus == 0"
-            class="flex flex-col justify-center items-center h-fit"
+            class="flex flex-col justify-start items-center h-fit"
           >
-            <p class="mt-2 text-red-600">Failed to connect</p>
+            <p class="mt-2 text-red-600 text-start">Failed to connect to database</p>
+          </div>
+          <div v-show="apiStatus == 0" class="flex flex-col justify-start items-center h-fit">
+            <p class="mt-2 text-red-600 text-start">Failed to connect to api</p>
           </div>
         </div>
 
@@ -398,7 +501,7 @@ onMounted(() => {
           <button class="btn btn-sm btn-neutral mr-5" @click="checkLocalDatabase">
             Test Connection
           </button>
-          <button class="btn btn-sm btn-primary text-slate-50" @click="updateDatabaseConfig">
+          <button class="btn btn-sm btn-primary text-slate-50" @click="updateConfig">
             Save & Exit
           </button>
         </div>
