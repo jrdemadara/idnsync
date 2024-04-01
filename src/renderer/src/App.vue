@@ -45,7 +45,7 @@ const defaultStatus = () => {
 
 const databaseConfig = ref({
   server: localStorage.getItem('server'),
-  port: localStorage.getItem('port'),
+  port: 1433,
   user: localStorage.getItem('user'),
   password: localStorage.getItem('password'),
   database: localStorage.getItem('database'),

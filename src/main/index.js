@@ -164,18 +164,22 @@ ipcMain.on('insert-data', async (event, data) => {
       const birthdate = item.birth_date
       const chapter = item.chapter
       const qrcode = item.qr_code_url
+
       // Convert blob to PNG & save to external directory
       const photoBuffer = item.photo !== null ? Buffer.from(item.photo, 'base64') : ''
-      const photoDir = path.join(os.homedir(), photoDirectory)
-      const photoFilePath = path.join(photoDir, `${roll_number}.jpg`)
+      if (photoBuffer.length > 0) {
+        const photoDir = path.join(os.homedir(), photoDirectory)
+        const photoFilePath = path.join(photoDir, `${roll_number}.jpg`)
+        fs.writeFileSync(photoFilePath, photoBuffer)
+      }
 
       const signatureBuffer = item.signature !== null ? Buffer.from(item.signature, 'base64') : ''
-      const signatureDir = path.join(os.homedir(), signatureDirectory)
-      const signatureFilePath = path.join(signatureDir, `${roll_number}.jpg`)
+      if (signatureBuffer.length > 0) {
+        const signatureDir = path.join(os.homedir(), signatureDirectory)
+        const signatureFilePath = path.join(signatureDir, `${roll_number}.jpg`)
+        fs.writeFileSync(signatureFilePath, signatureBuffer)
+      }
 
-      // Save the buffer to a PNG file
-      fs.writeFileSync(photoFilePath, photoBuffer)
-      fs.writeFileSync(signatureFilePath, signatureBuffer)
       //TODO: Check database for duplicate entry before insert
       const insertQuery = `
     IF EXISTS (SELECT * FROM tblDelegates WHERE Field2 = '${roll_number}')
