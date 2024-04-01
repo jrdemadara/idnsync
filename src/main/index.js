@@ -167,11 +167,11 @@ ipcMain.on('insert-data', async (event, data) => {
       // Convert blob to PNG & save to external directory
       const photoBuffer = item.photo !== null ? Buffer.from(item.photo, 'base64') : ''
       const photoDir = path.join(os.homedir(), photoDirectory)
-      const photoFilePath = path.join(photoDir, `${roll_number}.png`)
+      const photoFilePath = path.join(photoDir, `${roll_number}.jpg`)
 
       const signatureBuffer = item.signature !== null ? Buffer.from(item.signature, 'base64') : ''
       const signatureDir = path.join(os.homedir(), signatureDirectory)
-      const signatureFilePath = path.join(signatureDir, `${roll_number}.png`)
+      const signatureFilePath = path.join(signatureDir, `${roll_number}.jpg`)
 
       // Save the buffer to a PNG file
       fs.writeFileSync(photoFilePath, photoBuffer)
