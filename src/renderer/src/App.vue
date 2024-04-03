@@ -3,13 +3,10 @@ import { ref, onMounted } from 'vue'
 import axios from 'axios'
 import oauth from 'axios-oauth-client'
 import { Settings, HelpCircle } from 'lucide-vue-next'
-//import configData from '@renderer/assets/config.json'
-
-// Import ipcRenderer using require from Electron
-const { ipcRenderer } = require('electron')
-
+import { version } from '../../../package.json'
+import backgroundImage from './assets/wavy-lines.svg'
 // Get the dirname synchronously
-const dirname = ipcRenderer.sendSync('get-dirname')
+const dirname = window.electron.ipcRenderer.sendSync('get-dirname')
 
 // Initialize reactive variables using ref
 const server = ref('')
@@ -152,8 +149,8 @@ const checkLocalDatabase = async () => {
 
   await new Promise((resolve) => setTimeout(resolve, 3000))
   authenticate()
-  ipcRenderer.send('check-database-connection', config, dirname)
-  ipcRenderer.on('check_database-response', (event, result) => {
+  window.electron.ipcRenderer.send('check-database-connection', config, dirname)
+  window.electron.ipcRenderer.on('check_database-response', (event, result) => {
     if (result.success) {
       databaseStatus.value = 1
       testing.value = false
@@ -168,8 +165,8 @@ const checkLocalDatabase = async () => {
 
 const connectLocalDatabase = async () => {
   const config = JSON.stringify(databaseConfig.value)
-  ipcRenderer.send('set-database-config', config, dirname)
-  ipcRenderer.on('connect-local-response', (event, result) => {
+  window.electron.ipcRenderer.send('set-database-config', config, dirname)
+  window.electron.ipcRenderer.on('connect-local-response', (event, result) => {
     if (result.success) {
       databaseStatus.value = 1
     } else {
@@ -184,7 +181,7 @@ const loadDirectory = async () => {
   const configJson = JSON.stringify(directoryConfig)
   photo_directory.value = localStorage.getItem('photo_directory')
   signature_directory.value = localStorage.getItem('signature_directory')
-  ipcRenderer.send('set-directory-config', configJson, dirname)
+  window.electron.ipcRenderer.send('set-directory-config', configJson, dirname)
 }
 
 const syncData = async () => {
@@ -209,9 +206,9 @@ const syncData = async () => {
           status.value = 'Synchronizing'
           message.value = `Synchronizing ${newData.length} new data...`
 
-          ipcRenderer.send('insert-data', JSON.stringify(newData))
+          window.electron.ipcRenderer.send('insert-data', JSON.stringify(newData))
 
-          ipcRenderer.on('insert-data-response', (event, result) => {
+          window.electron.ipcRenderer.on('insert-data-response', (event, result) => {
             if (result.success) {
               status.value = 'Completed'
               message.value = 'Database is up to date.'
@@ -248,15 +245,22 @@ onMounted(() => {
   loadDirectory()
   connectLocalDatabase()
 })
+
+// IPC Sample
+const ipcHandle = () => window.electron.ipcRenderer.send('ping')
 </script>
 
 <template>
-  <div class="flex flex-col w-screen h-screen bg-slate-950">
+  <div
+    class="flex flex-col w-screen h-screen bg-cover bg-center bg-no-repeat"
+    :style="{ backgroundImage: 'url(${backgroundImage})' }"
+  >
     <header class="flex justify-between w-screen h-fit mt-2 px-2 bg-transparent">
       <div class="flex justify-center items-center">
-        <img src="./assets/icon.png" alt="logo" class="w-10 mr-2" />
+        <img src="./assets/electron.svg" alt="logo" class="w-10 mr-2" />
         <h4 class="font-bold text-slate-50 mr-1">
-          IDNSync <span class="font-light text-xs font-mono">v1.1.20</span>
+          IDNSync
+          <span class="font-extralight text-xs font-mono">{{ version }}</span>
         </h4>
       </div>
       <div class="flex justify-center items-center">
@@ -512,7 +516,7 @@ onMounted(() => {
       v-show="section == 'about'"
       class="flex flex-col justify-center items-center w-screen h-screen"
     >
-      <img src="./assets/icon.png" alt="logo" class="w-36" />
+      <img src="./assets/electron.svg" alt="logo" class="w-36" />
       <h2 class="text-xl">Built in <span class="text-cyan-200">Electron</span></h2>
       <h2 class="text-base">
         Powered by <span class="text-fuchsia-500">Vite</span> +
@@ -525,7 +529,3 @@ onMounted(() => {
     </div>
   </div>
 </template>
-
-<style lang="less">
-@import './assets/css/styles.less';
-</style>

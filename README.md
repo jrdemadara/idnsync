@@ -1,4 +1,4 @@
-# idnow-updater
+# idnsync
 
 An Electron application with Vue
 

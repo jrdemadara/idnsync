@@ -1,11 +1,14 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import sql from 'mssql'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import sql from 'mssql'
 import path from 'path'
 import os from 'os'
 const fs = require('fs')
+
+// run this as early in the main process as possible
+if (require('electron-squirrel-startup')) app.quit()
 
 let dbConnection
 let dirname
@@ -15,15 +18,14 @@ let signatureDirectory
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 550,
-    height: 600,
+    width: 900,
+    height: 670,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      nodeIntegration: true,
-      contextIsolation: false
+      sandbox: false
     }
   })
 
@@ -59,6 +61,9 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  // IPC test
+  ipcMain.on('ping', () => console.log('pong'))
+
   createWindow()
 
   app.on('activate', function () {
@@ -66,14 +71,6 @@ app.whenReady().then(() => {
     // dock icon is clicked and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-})
-
-// Disconnect from the database when the app is about to quit
-app.on('before-quit', () => {
-  if (dbConnection) {
-    dbConnection.close()
-    console.log('Disconnected from MSSQL database')
-  }
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common
