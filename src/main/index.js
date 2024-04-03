@@ -18,8 +18,8 @@ let signatureDirectory
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 720,
+    height: 590,
     show: false,
     autoHideMenuBar: true,
     ...(process.platform === 'linux' ? { icon } : {}),
@@ -153,6 +153,7 @@ ipcMain.on('insert-data', async (event, data) => {
   try {
     const parsedData = JSON.parse(data)
     const request = new sql.Request(dbConnection)
+
     for (const item of parsedData) {
       const roll_number = item.roll_number
       const lastname = item.last_name

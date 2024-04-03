@@ -32,6 +32,10 @@ const message = ref('Click to synchronize data.')
 const databaseConnectionStatus = ref('x')
 
 const accessToken = ref('0')
+const pageCount = ref(0)
+const currentPage = ref(1)
+const totalItems = ref(0)
+const data = ref([])
 
 const defaultStatus = () => {
   testing.value = false
@@ -99,7 +103,6 @@ const updateConfig = async () => {
 }
 
 const authenticate = async () => {
-  console.log(apiConfig.value.clientID)
   const getClientCredentials = oauth.clientCredentials(
     axios.create(),
     `${apiConfig.value.endpoint}/oauth`,
@@ -184,6 +187,66 @@ const loadDirectory = async () => {
   window.electron.ipcRenderer.send('set-directory-config', configJson, dirname)
 }
 
+const fetchPageCount = async () => {
+  try {
+    const response = await axios.get(`${endpoint.value}/id-data?page=${currentPage.value}`, {
+      headers: { Authorization: `Bearer ${accessToken.value}` }
+    })
+    if (response.status == 200) {
+      pageCount.value = response.data.page_count
+      totalItems.value = response.data.total_items
+      return true
+    } else {
+      return false
+    }
+  } catch (error) {
+    return false
+  }
+}
+
+const saveToDatabase = async () => {
+  data.value.forEach((element) => {
+    const mockData = 1
+    if (mockData > 0) {
+      status.value = 'Synchronizing'
+      message.value = `Synchronizing ${totalItems.value.length} new data...`
+      window.electron.ipcRenderer.send('insert-data', JSON.stringify(element))
+      window.electron.ipcRenderer.on('insert-data-response', (event, result) => {
+        if (result.success) {
+          status.value = 'Completed'
+          message.value = 'Database is up to date.'
+          pageCount.value = 0
+          currentPage.value = 1
+          totalItems.value = 0
+          setTimeout(function () {
+            defaultStatus()
+          }, 10000)
+        } else {
+          status.value = 'Resync'
+          message.value = 'Error migrating data.'
+          pageCount.value = 0
+          currentPage.value = 1
+          totalItems.value = 0
+          setTimeout(function () {
+            defaultStatus()
+          }, 10000)
+        }
+      })
+    } else {
+      console.log('data 0')
+      loading.value = false
+      status.value = 'Resync'
+      message.value = 'Database is up to date.'
+      pageCount.value = 0
+      currentPage.value = 1
+      totalItems.value = 0
+      setTimeout(function () {
+        defaultStatus()
+      }, 10000)
+    }
+  })
+}
+
 const syncData = async () => {
   if (!loading.value) {
     loading.value = true
@@ -194,45 +257,35 @@ const syncData = async () => {
 
     if (apiStatus.value === 1) {
       try {
-        const response = await axios.get(`${endpoint.value}/id-data?page=1`, {
-          headers: { Authorization: `Bearer ${accessToken.value}` }
-        })
-
-        const {
-          _embedded: { id_data: newData }
-        } = response.data
-
-        if (newData.length > 0) {
+        const hasPageCount = await fetchPageCount()
+        if (hasPageCount == true) {
           status.value = 'Synchronizing'
-          message.value = `Synchronizing ${newData.length} new data...`
-
-          window.electron.ipcRenderer.send('insert-data', JSON.stringify(newData))
-
-          window.electron.ipcRenderer.on('insert-data-response', (event, result) => {
-            if (result.success) {
-              status.value = 'Completed'
-              message.value = 'Database is up to date.'
-              setTimeout(function () {
-                defaultStatus()
-              }, 10000)
-            } else {
-              status.value = 'Resync'
-              message.value = 'Error migrating data.'
-              setTimeout(function () {
-                defaultStatus()
-              }, 10000)
-            }
-          })
-        } else {
-          loading.value = false
-          status.value = 'Resync'
-          message.value = 'Database is up to date.'
-          setTimeout(function () {
-            defaultStatus()
-          }, 10000)
+          message.value = `Synchronizing ${totalItems.value} data. Please wait...`
+          for (currentPage.value; currentPage.value <= pageCount.value; currentPage.value++) {
+            console.log('page executed:' + currentPage.value)
+            axios
+              .get(`${endpoint.value}/id-data?page=${currentPage.value}`, {
+                headers: { Authorization: `Bearer ${accessToken.value}` }
+              })
+              .then(function (response) {
+                const person = response.data._embedded.id_data
+                data.value.push(person)
+                // person.forEach((element) => {
+                //   data.value.push(element)
+                // })
+              })
+              .catch(function (error) {
+                console.log(error)
+              })
+          }
+          await new Promise((resolve) => setTimeout(resolve, 8000))
+          if (currentPage.value > pageCount.value) {
+            saveToDatabase()
+          }
         }
       } catch (error) {
-        console.log(error)
+        status.value = 'Resync'
+        message.value = 'Error migrating data.'
       }
     }
   }
@@ -252,8 +305,8 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
 
 <template>
   <div
-    class="flex flex-col w-screen h-screen bg-cover bg-center bg-no-repeat"
-    :style="{ backgroundImage: 'url(${backgroundImage})' }"
+    class="flex flex-col w-screen h-screen bg-cover bg-center bg-no-repeat bg-slate-900"
+    :style="{ 'background-image': 'url(' + backgroundImage + ')' }"
   >
     <header class="flex justify-between w-screen h-fit mt-2 px-2 bg-transparent">
       <div class="flex justify-center items-center">
@@ -344,7 +397,7 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
                   v-model="server"
                   type="text"
                   placeholder=""
-                  class="input input-sm input-bordered w-full max-w-xs"
+                  class="input input-sm input-bordered w-full max-w-xs bg-slate-800"
                 />
               </label>
               <label class="form-control w-full max-w-xs">
@@ -355,7 +408,7 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
                   v-model="port"
                   type="text"
                   placeholder=""
-                  class="input input-sm input-bordered w-full max-w-xs"
+                  class="input input-sm input-bordered w-full max-w-xs bg-slate-800"
                 />
               </label>
               <label class="form-control w-full max-w-xs">
@@ -366,7 +419,7 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
                   v-model="user"
                   type="text"
                   placeholder=""
-                  class="input input-sm input-bordered w-full max-w-xs"
+                  class="input input-sm input-bordered w-full max-w-xs bg-slate-800"
                 />
               </label>
               <label class="form-control w-full max-w-xs">
@@ -377,7 +430,7 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
                   v-model="password"
                   type="password"
                   placeholder=""
-                  class="input input-sm input-bordered w-full max-w-xs"
+                  class="input input-sm input-bordered w-full max-w-xs bg-slate-800"
                 />
               </label>
               <label class="form-control w-full max-w-xs">
@@ -388,7 +441,7 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
                   v-model="database"
                   type="text"
                   placeholder=""
-                  class="input input-sm input-bordered w-full max-w-xs"
+                  class="input input-sm input-bordered w-full max-w-xs bg-slate-800"
                 />
               </label>
             </div>
@@ -411,7 +464,7 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
                   v-model="photo_directory"
                   type="text"
                   placeholder="e.g., /Documents/IDnow/Photo"
-                  class="input input-sm input-bordered w-full max-w-xs"
+                  class="input input-sm input-bordered w-full max-w-xs bg-slate-800"
                 />
               </label>
               <label class="form-control w-full max-w-xs">
@@ -426,7 +479,7 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
                   v-model="signature_directory"
                   type="text"
                   placeholder="e.g., /Documents/IDnow/Signature"
-                  class="input input-sm input-bordered w-full max-w-xs"
+                  class="input input-sm input-bordered w-full max-w-xs bg-slate-800"
                 />
               </label>
             </div>
@@ -447,7 +500,7 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
                   v-model="endpoint"
                   type="text"
                   placeholder="e.g., https://yourdomain.com"
-                  class="input input-sm input-bordered w-full max-w-xs"
+                  class="input input-sm input-bordered w-full max-w-xs bg-slate-800"
                 />
               </label>
               <label class="form-control w-full max-w-xs">
@@ -458,7 +511,7 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
                   v-model="clientID"
                   type="text"
                   placeholder=""
-                  class="input input-sm input-bordered w-full max-w-xs"
+                  class="input input-sm input-bordered w-full max-w-xs bg-slate-800"
                 />
               </label>
               <label class="form-control w-full max-w-xs">
@@ -469,7 +522,7 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
                   v-model="clientSecret"
                   type="text"
                   placeholder=""
-                  class="input input-sm input-bordered w-full max-w-xs"
+                  class="input input-sm input-bordered w-full max-w-xs bg-slate-800"
                 />
               </label>
             </div>
