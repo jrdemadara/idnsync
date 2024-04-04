@@ -6,6 +6,7 @@ import sql from 'mssql'
 import path from 'path'
 import os from 'os'
 const fs = require('fs')
+const sharp = require('sharp')
 
 // run this as early in the main process as possible
 if (require('electron-squirrel-startup')) app.quit()
@@ -148,12 +149,64 @@ async function connectToDatabase(config) {
   }
 }
 
+async function convertBase64ToJpg(photo, rollNumber, directory) {
+  try {
+    // Convert Base64 string to buffer
+    const buffer = Buffer.from(photo, 'base64')
+
+    // Prepare the directory path
+    const photoDir = path.join(os.homedir(), directory)
+
+    // Create the directory if it doesn't exist
+    if (!fs.existsSync(photoDir)) {
+      fs.mkdirSync(photoDir, { recursive: true })
+    }
+
+    // Prepare the file path
+    const photoFilePath = path.join(photoDir, `${rollNumber}.jpg`)
+
+    // Create a new white canvas with the same dimensions as the input photo
+    const { width, height } = await sharp(buffer).metadata()
+    const whiteCanvasBuffer = await sharp({
+      create: {
+        width: width,
+        height: height,
+        channels: 3, // 3 channels for RGB
+        background: { r: 255, g: 255, b: 255 } // White background
+      }
+    })
+      .jpeg()
+      .toBuffer()
+
+    // Overlay the original photo on top of the white canvas
+    const outputImageBuffer = await sharp(whiteCanvasBuffer)
+      .composite([{ input: buffer }])
+      .jpeg()
+      .toBuffer()
+
+    // Save the modified image to a file
+    fs.writeFileSync(photoFilePath, outputImageBuffer)
+    // console.log(`Image saved as ${photoFilePath}`)
+  } catch (error) {
+    console.error('An error occurred:', error)
+  }
+}
+
+function throttle(func, delay) {
+  let lastCall = 0
+  return function (...args) {
+    const now = Date.now()
+    if (now - lastCall >= delay) {
+      func.apply(this, args)
+      lastCall = now
+    }
+  }
+}
 // Handle the insert operation
 ipcMain.on('insert-data', async (event, data) => {
   try {
     const parsedData = JSON.parse(data)
     const request = new sql.Request(dbConnection)
-
     for (const item of parsedData) {
       const roll_number = item.roll_number
       const lastname = item.last_name
@@ -163,19 +216,14 @@ ipcMain.on('insert-data', async (event, data) => {
       const chapter = item.chapter
       const qrcode = item.qr_code_url
 
-      // Convert blob to PNG & save to external directory
-      const photoBuffer = item.photo !== null ? Buffer.from(item.photo, 'base64') : ''
-      if (photoBuffer.length > 0) {
-        const photoDir = path.join(os.homedir(), photoDirectory)
-        const photoFilePath = path.join(photoDir, `${roll_number}.jpg`)
-        fs.writeFileSync(photoFilePath, photoBuffer)
+      const throttled1 = throttle(convertBase64ToJpg, 200)
+      const throttled2 = throttle(convertBase64ToJpg, 200)
+      if (item.photo) {
+        throttled1(item.photo, roll_number, photoDirectory)
       }
 
-      const signatureBuffer = item.signature !== null ? Buffer.from(item.signature, 'base64') : ''
-      if (signatureBuffer.length > 0) {
-        const signatureDir = path.join(os.homedir(), signatureDirectory)
-        const signatureFilePath = path.join(signatureDir, `${roll_number}.jpg`)
-        fs.writeFileSync(signatureFilePath, signatureBuffer)
+      if (item.signature) {
+        throttled2(item.signature, roll_number, signatureDirectory)
       }
 
       //TODO: Check database for duplicate entry before insert
@@ -192,9 +240,6 @@ ipcMain.on('insert-data', async (event, data) => {
         VALUES ('${roll_number}','${lastname}', '${firstname}', '${middlename}', '${birthdate}', '${chapter}', '${qrcode}', '${roll_number}', '${roll_number}');
     END
 `
-
-      // Insert data to local database
-      //const insertQuery = `INSERT INTO tblDelegates (Field1, Field2, Field3, Field4, Field5, Field6, Field7 ) VALUES ('${roll_number}', '${fullname}','${birthdate}', '${roll_number}', '${chapter}', '${qrcode}', '${roll_number}')`
       const result = await request.query(insertQuery)
       event.sender.send('insert-data-response', { success: true, result })
     }
