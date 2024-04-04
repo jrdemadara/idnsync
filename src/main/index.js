@@ -6,7 +6,7 @@ import sql from 'mssql'
 import path from 'path'
 import os from 'os'
 const fs = require('fs')
-const sharp = require('sharp')
+const Jimp = require('jimp')
 
 // run this as early in the main process as possible
 if (require('electron-squirrel-startup')) app.quit()
@@ -150,46 +150,38 @@ async function connectToDatabase(config) {
 }
 
 async function convertBase64ToJpg(photo, rollNumber, directory) {
-  try {
-    // Convert Base64 string to buffer
-    const buffer = Buffer.from(photo, 'base64')
+  // Convert base64 string to buffer
+  const buffer = Buffer.from(photo, 'base64')
 
-    // Prepare the directory path
-    const photoDir = path.join(os.homedir(), directory)
+  // Create directory if it doesn't exist
+  const photoDir = path.join(os.homedir(), directory)
+  if (!fs.existsSync(photoDir)) {
+    fs.mkdirSync(photoDir, { recursive: true })
+  }
 
-    // Create the directory if it doesn't exist
-    if (!fs.existsSync(photoDir)) {
-      fs.mkdirSync(photoDir, { recursive: true })
+  // Set file paths
+  const photoFilePath = path.join(photoDir, `${rollNumber}.jpg`)
+
+  // Load base64 image using Jimp
+  Jimp.read(buffer, (err, image) => {
+    if (err) {
+      console.error('Error reading base64 image:', err)
+      return
     }
 
-    // Prepare the file path
-    const photoFilePath = path.join(photoDir, `${rollNumber}.jpg`)
-
-    // Create a new white canvas with the same dimensions as the input photo
-    const { width, height } = await sharp(buffer).metadata()
-    const whiteCanvasBuffer = await sharp({
-      create: {
-        width: width,
-        height: height,
-        channels: 3, // 3 channels for RGB
-        background: { r: 255, g: 255, b: 255 } // White background
-      }
-    })
-      .jpeg()
-      .toBuffer()
-
-    // Overlay the original photo on top of the white canvas
-    const outputImageBuffer = await sharp(whiteCanvasBuffer)
-      .composite([{ input: buffer }])
-      .jpeg()
-      .toBuffer()
-
-    // Save the modified image to a file
-    fs.writeFileSync(photoFilePath, outputImageBuffer)
-    // console.log(`Image saved as ${photoFilePath}`)
-  } catch (error) {
-    console.error('An error occurred:', error)
-  }
+    // Manipulate image to change background color
+    image
+      .cover(image.bitmap.width, image.bitmap.height) // Ensure image fills the canvas
+      .background(0xffffffff) // Set background color to white (RGBA format)
+      .quality(90) // Set JPEG quality
+      .write(photoFilePath, (err) => {
+        if (err) {
+          console.error('Error writing JPEG file:', err)
+          return
+        }
+        console.log('Background color changed and JPEG saved successfully')
+      })
+  })
 }
 
 function throttle(func, delay) {

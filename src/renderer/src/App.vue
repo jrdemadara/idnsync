@@ -4,7 +4,7 @@ import axios from 'axios'
 import oauth from 'axios-oauth-client'
 import { Settings, HelpCircle } from 'lucide-vue-next'
 import { version } from '../../../package.json'
-import backgroundImage from './assets/wavy-lines.svg'
+import backgroundImage from './assets/wavylines.svg'
 // Get the dirname synchronously
 const dirname = window.electron.ipcRenderer.sendSync('get-dirname')
 
@@ -300,8 +300,7 @@ const ipcHandle = () => window.electron.ipcRenderer.send('ping')
 
 <template>
   <div
-    class="flex flex-col w-screen h-screen bg-cover bg-center bg-no-repeat bg-slate-900"
-    :style="{ 'background-image': 'url(' + backgroundImage + ')' }"
+    class="bg-background flex flex-col w-screen h-screen bg-cover bg-center bg-no-repeat bg-slate-950"
   >
     <header class="flex justify-between w-screen h-fit mt-2 px-2 bg-transparent">
       <div class="flex justify-center items-center">
