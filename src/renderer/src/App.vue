@@ -206,7 +206,7 @@ const fetchPageCount = async () => {
 
 const saveToDatabase = async () => {
   data.value.forEach((element) => {
-    const mockData = 1
+    const mockData = 1 //Replace with actual api data value length
     if (mockData > 0) {
       status.value = 'Synchronizing'
       message.value = `Synchronizing ${totalItems.value.length} new data...`
@@ -253,40 +253,35 @@ const syncData = async () => {
     status.value = 'Checking'
     message.value = 'Checking for update...'
 
-    await new Promise((resolve) => setTimeout(resolve, 5000))
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 5000))
 
-    if (apiStatus.value === 1) {
-      try {
+      if (apiStatus.value === 1) {
         const hasPageCount = await fetchPageCount()
-        if (hasPageCount == true) {
+        if (hasPageCount) {
           status.value = 'Synchronizing'
           message.value = `Synchronizing ${totalItems.value} data. Please wait...`
-          for (currentPage.value; currentPage.value <= pageCount.value; currentPage.value++) {
-            console.log('page executed:' + currentPage.value)
-            axios
-              .get(`${endpoint.value}/id-data?page=${currentPage.value}`, {
-                headers: { Authorization: `Bearer ${accessToken.value}` }
-              })
-              .then(function (response) {
-                const person = response.data._embedded.id_data
-                data.value.push(person)
-                // person.forEach((element) => {
-                //   data.value.push(element)
-                // })
-              })
-              .catch(function (error) {
-                console.log(error)
-              })
-          }
-          await new Promise((resolve) => setTimeout(resolve, 8000))
-          if (currentPage.value > pageCount.value) {
-            saveToDatabase()
-          }
+
+          const pageRequests = Array.from({ length: pageCount.value }, (_, index) => {
+            const page = index + 1
+            return axios.get(`${endpoint.value}/id-data?page=${page}`, {
+              headers: { Authorization: `Bearer ${accessToken.value}` }
+            })
+          })
+
+          const responses = await Promise.all(pageRequests)
+
+          responses.forEach((response) => {
+            const person = response.data._embedded.id_data
+            data.value.push(person)
+          })
+
+          saveToDatabase()
         }
-      } catch (error) {
-        status.value = 'Resync'
-        message.value = 'Error migrating data.'
       }
+    } catch (error) {
+      status.value = 'Resync'
+      message.value = 'Error migrating data.'
     }
   }
 }
