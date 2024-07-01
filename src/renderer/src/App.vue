@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
-import oauth from 'axios-oauth-client'
+
 import { Settings, HelpCircle } from 'lucide-vue-next'
 import { version } from '../../../package.json'
 import backgroundImage from './assets/wavylines.svg'
@@ -102,26 +102,7 @@ const updateConfig = async () => {
   section.value = 'main'
 }
 
-const authenticate = async () => {
-  const getClientCredentials = oauth.clientCredentials(
-    axios.create(),
-    `${apiConfig.value.endpoint}/oauth`,
-    apiConfig.value.clientID,
-    apiConfig.value.clientSecret
-  )
-
-  try {
-    const auth = await getClientCredentials('printer', 'client_credentials')
-    accessToken.value = auth.access_token
-    if (auth.access_token) {
-      apiStatus.value = 1
-    } else {
-      apiStatus.value = 0
-    }
-  } catch (e) {
-    apiStatus.value = 0
-  }
-}
+const authenticate = async () => {}
 
 const checkLocalDatabase = async () => {
   localStorage.setItem('server', server.value)
@@ -287,7 +268,6 @@ const syncData = async () => {
 }
 
 onMounted(() => {
-  authenticate()
   loadDatabaseToUI()
   loadApiToUI()
   loadDirectory()
