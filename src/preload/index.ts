@@ -1,8 +1,13 @@
-import { contextBridge } from 'electron'
+import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
-const api = {}
+const api = {
+  testDbConnection: (config) => ipcRenderer.invoke('test-db-connection', config),
+  createDirectory: (relativePath: string) => ipcRenderer.invoke('create-directory', relativePath),
+  getLastSyncedId: (config) => ipcRenderer.invoke('get-last-synced-id', config),
+  syncToDatabase: (config, data: any[]) => ipcRenderer.invoke('sync-batch', { config, data })
+}
 
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
@@ -15,6 +20,8 @@ if (process.contextIsolated) {
     console.error(error)
   }
 } else {
+  // @ts-ignore (define in dts)
   window.electron = electronAPI
+  // @ts-ignore (define in dts)
   window.api = api
 }

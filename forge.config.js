@@ -1,5 +1,6 @@
 const { FusesPlugin } = require('@electron-forge/plugin-fuses')
 const { FuseV1Options, FuseVersion } = require('@electron/fuses')
+const packageJson = require('./package.json')
 
 module.exports = {
   packagerConfig: {
@@ -9,7 +10,7 @@ module.exports = {
   makers: [
     {
       name: '@electron-forge/maker-squirrel',
-      config: {}
+      platforms: ['win32']
     },
     {
       name: '@electron-forge/maker-zip',
@@ -18,6 +19,23 @@ module.exports = {
     {
       name: '@electron-forge/maker-deb',
       config: {}
+    },
+    {
+      name: '@electron-forge/maker-rpm',
+      config: {}
+    },
+    {
+      name: '@electron-forge/maker-dmg',
+      config: (arch) => ({
+        name: `IDNSync-${packageJson.version}-${arch}`,
+        title: `IDNSync v${packageJson.version} Installer`,
+        icon: './src/renderer/src/assets/electron.svg'
+        // background: './src/renderer/src/assets/wavy-lines-installer.svg',
+        // window: {
+        //   width: 540,
+        //   height: 380
+        // }
+      })
     }
   ],
   plugins: [

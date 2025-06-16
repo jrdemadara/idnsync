@@ -1,6 +1,6 @@
-# idnsync
+# rarenet-hq
 
-An Electron application with Vue
+An Electron application with Vue and TypeScript
 
 ## Recommended IDE Setup
 
